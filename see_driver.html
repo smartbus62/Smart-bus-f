@@ -15,41 +15,65 @@
       margin-top: 20px;
     }
   </style>
+
+  <!-- Firebase مكتبات -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDbxJiBUVutivO_m6Q0-RdVohNaXauIe7Q",
+      authDomain: "smart-buss-d28fc.firebaseapp.com",
+      projectId: "smart-buss-d28fc",
+      storageBucket: "smart-buss-d28fc.appspot.com",
+      messagingSenderId: "1053196463821",
+      appId: "1:1053196463821:web:36ef08cdb73e85222b8384",
+      measurementId: "G-YR6THVL5H0"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.db = db; // عشان نقدر نستخدمه خارج السكربت
+  </script>
 </head>
+
 <body>
   <h2>موقع السائق الآن</h2>
   <div id="map"></div>
 
-  <script>
-    function initMap() {
+  <script type="module">
+    import { collection, getDocs } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    async function initMap() {
       const map = new google.maps.Map(document.getElementById("map"), {
-        zoom: 15,
-        center: { lat: 24.7136, lng: 46.6753 }, // موقع افتراضي للرياض
+        zoom: 14,
+        center: { lat: 24.7136, lng: 46.6753 }, // مركز الخريطة مبدئي للرياض
       });
 
-      if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(
-          (position) => {
-            const driverPos = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            };
-            map.setCenter(driverPos);
+      try {
+        const driversSnapshot = await getDocs(collection(db, "drivers"));
+        driversSnapshot.forEach((doc) => {
+          const driver = doc.data();
+          if (driver.location) {
+            const locationParts = driver.location.split(",");
+            const lat = parseFloat(locationParts[0]);
+            const lng = parseFloat(locationParts[1]);
+            
             new google.maps.Marker({
-              position: driverPos,
-              map,
+              position: { lat: lat, lng: lng },
+              map: map,
               icon: "https://maps.google.com/mapfiles/kml/shapes/bus.png",
-              title: "موقع السائق"
+              title: driver.name || "سائق"
             });
-          },
-          () => {
-            alert("تعذر الحصول على موقع السائق.");
           }
-        );
-      } else {
-        alert("المتصفح لا يدعم تتبع الموقع.");
+        });
+      } catch (error) {
+        console.error("خطأ في تحميل مواقع السائقين:", error);
       }
     }
+
+    window.initMap = initMap;
   </script>
 
   <script async defer
