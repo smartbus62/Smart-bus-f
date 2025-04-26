@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>تتبع الطلاب</title>
   <style>
     body {
@@ -15,18 +15,17 @@
     #map {
       width: 100%;
       height: 90vh;
-    }
-    h2 {
       margin-top: 20px;
     }
   </style>
 </head>
+
 <body>
   <h2>مواقع الطلاب</h2>
   <div id="map"></div>
 
-  <!-- Firebase -->
   <script type="module">
+    // Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
     import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
@@ -35,8 +34,8 @@
       authDomain: "smart-buss-9b145.firebaseapp.com",
       projectId: "smart-buss-9b145",
       storageBucket: "smart-buss-9b145.appspot.com",
-      messagingSenderId: "848213201518",
-      appId: "1:848213201518:web:8ab574ccebbce01d909bb5"
+      messagingSenderId: "91686531082",
+      appId: "1:91686531082:web:3bbd8e9c10db0caa0c6016"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -46,21 +45,29 @@
 
     async function initMap() {
       map = new google.maps.Map(document.getElementById("map"), {
+        zoom: 12,
         center: { lat: 24.7136, lng: 46.6753 }, // مركز الرياض
-        zoom: 10,
       });
 
-      const studentsCol = collection(db, "students");
-      const studentsSnapshot = await getDocs(studentsCol);
-
+      const studentsSnapshot = await getDocs(collection(db, "students"));
       studentsSnapshot.forEach((doc) => {
         const data = doc.data();
-        if (data.location && data.location.lat && data.location.lng) {
-          new google.maps.Marker({
-            position: { lat: data.location.lat, lng: data.location.lng },
+        if (data.location) {
+          const marker = new google.maps.Marker({
+            position: {
+              lat: data.location.lat,
+              lng: data.location.lng
+            },
             map: map,
             title: data.name,
-            icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png" // لون الدبوس أزرق
+          });
+
+          const infowindow = new google.maps.InfoWindow({
+            content: `<strong>${data.name}</strong>`,
+          });
+
+          marker.addListener("click", () => {
+            infowindow.open(map, marker);
           });
         }
       });
@@ -69,7 +76,9 @@
     window.initMap = initMap;
   </script>
 
-  <!-- Google Maps API -->
-  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU&callback=initMap"></script>
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU&callback=initMap">
+  </script>
+
 </body>
 </html>
