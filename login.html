@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>تسجيل الطالب</title>
   <style>
     body {
-      font-family: Arial;
+      font-family: 'Tajawal', sans-serif;
       direction: rtl;
       text-align: center;
       background-color: #f4f4f4;
@@ -15,35 +16,34 @@
 
     .container {
       margin-top: 20px;
-      max-width: 600px;
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 500px;
       margin-left: auto;
       margin-right: auto;
-      padding: 20px;
-      background-color: #fff;
-      border-radius: 10px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     input, button {
+      width: 90%;
       margin: 10px;
       padding: 15px;
-      font-size: 16px;
-      border-radius: 5px;
-      width: 100%;
+      font-size: 18px;
       border: 1px solid #ccc;
-      box-sizing: border-box;
+      border-radius: 8px;
     }
 
     button {
-      background-color: #28a745;
-      color: white;
-      border: none;
+      background-color: #e0f7f4;
+      color: #333;
+      font-weight: bold;
       cursor: pointer;
-      font-size: 18px;
+      border: none;
     }
 
     button:hover {
-      background-color: #218838;
+      background-color: #c9f1ec;
     }
 
     #map {
@@ -52,12 +52,27 @@
       margin-top: 10px;
     }
   </style>
+</head>
+<body>
 
-  <!-- Firebase SDK -->
+  <div class="container">
+    <h2>تسجيل الطالب</h2>
+
+    <input type="text" id="studentName" placeholder="اسم الطالب" required><br>
+    <input type="email" id="studentEmail" placeholder="البريد الإلكتروني" required><br>
+    <input type="password" id="studentPassword" placeholder="كلمة المرور" required><br>
+
+    <div id="map"></div>
+
+    <button onclick="saveLocation()">حفظ الموقع</button><br>
+    <button onclick="registerStudent()">تسجيل الطالب</button>
+  </div>
+
+  <!-- Firebase & Google Maps -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
     import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-    import { getFirestore, collection, setDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDbxJiBUVutivO_m6Q0-RdVohNaXauIe7Q",
@@ -73,81 +88,66 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    let selectedLocation = { lat: 26.3260, lng: 43.9750 };
-    let map;
-    let marker;
+    let selectedLocation = null;
 
-    window.initMap = function () {
-      map = new google.maps.Map(document.getElementById("map"), {
-        center: selectedLocation,
-        zoom: 13,
-      });
-
-      marker = new google.maps.Marker({
-        position: selectedLocation,
-        map: map,
-        draggable: true,
-      });
-
-      map.addListener("click", function (e) {
+    window.saveLocation = function() {
+      if (marker) {
         selectedLocation = {
-          lat: e.latLng.lat(),
-          lng: e.latLng.lng()
+          lat: marker.getPosition().lat(),
+          lng: marker.getPosition().lng()
         };
-        marker.setPosition(selectedLocation);
-      });
+        alert("تم حفظ الموقع بنجاح!");
+      }
     };
 
-    document.getElementById("studentForm").addEventListener("submit", async function(e) {
-      e.preventDefault();
-
+    window.registerStudent = async function() {
       const name = document.getElementById("studentName").value;
       const email = document.getElementById("studentEmail").value;
       const password = document.getElementById("studentPassword").value;
 
-      if (!name || !email || !password) {
-        alert("يرجى تعبئة جميع الحقول.");
+      if (!name || !email || !password || !selectedLocation) {
+        alert("يرجى تعبئة جميع الحقول وتحديد الموقع.");
         return;
       }
 
       try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-
-        await setDoc(doc(db, "students", user.uid), {
+        await addDoc(collection(db, "students"), {
           name: name,
           email: email,
           location: selectedLocation,
-          attendance: {},
-          ascended: false,
           uid: user.uid
         });
-
         alert("تم تسجيل الطالب بنجاح!");
-        window.location.href = "attendance.html"; // تحويله لجدول الحضور بعد التسجيل
+        window.location.href = "attendance.html"; // توجيه الطالب بعد التسجيل
       } catch (error) {
-        alert("حدث خطأ أثناء التسجيل: " + error.message);
+        alert("خطأ: " + error.message);
       }
-    });
+    };
+
+    let map, marker;
+    window.initMap = function() {
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 24.7136, lng: 46.6753 },
+        zoom: 13,
+      });
+
+      marker = new google.maps.Marker({
+        position: { lat: 24.7136, lng: 46.6753 },
+        map: map,
+        draggable: true
+      });
+
+      map.addListener("click", function(event) {
+        marker.setPosition(event.latLng);
+      });
+    };
   </script>
-</head>
-
-<body>
-  <div class="container">
-    <h2>تسجيل الطالب</h2>
-
-    <form id="studentForm">
-      <input type="text" id="studentName" placeholder="اسم الطالب" required><br>
-      <input type="email" id="studentEmail" placeholder="البريد الإلكتروني" required><br>
-      <input type="password" id="studentPassword" placeholder="كلمة المرور" required><br>
-      <div id="map"></div><br>
-      <button type="submit">تسجيل الطالب</button>
-    </form>
-
-  </div>
 
   <script async defer
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU&callback=initMap">
   </script>
+
 </body>
 </html>
