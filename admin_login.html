@@ -2,152 +2,134 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>تسجيل المشرف</title>
   <style>
     body {
       font-family: 'Tajawal', sans-serif;
       direction: rtl;
       text-align: center;
-      background-color: #f4f4f4;
       margin: 0;
       padding: 0;
+      background-color: #f4f4f4;
     }
 
-    .container {
+    .header {
+      margin-top: 30px;
+      text-align: center;
+    }
+
+    .logo {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .title {
+      font-size: 28px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 5px;
+    }
+
+    .subtitle {
+      font-size: 20px;
+      color: #555;
+      margin-bottom: 30px;
+    }
+
+    form {
       margin-top: 20px;
-      background-color: #fff;
       padding: 20px;
+      background: white;
       border-radius: 10px;
-      max-width: 500px;
+      width: 90%;
+      max-width: 400px;
       margin-left: auto;
       margin-right: auto;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     }
 
     input, button {
       width: 90%;
-      margin: 10px;
-      padding: 15px;
-      font-size: 18px;
-      border: 1px solid #ccc;
+      padding: 12px;
+      margin: 10px 0;
+      font-size: 16px;
       border-radius: 8px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
     }
 
     button {
-      background-color: #e0f7f4;
-      color: #333;
-      font-weight: bold;
-      cursor: pointer;
+      background-color: #007bff;
+      color: white;
       border: none;
+      cursor: pointer;
     }
 
     button:hover {
-      background-color: #c9f1ec;
-    }
-
-    #map {
-      width: 100%;
-      height: 300px;
-      margin-top: 10px;
+      background-color: #0056b3;
     }
   </style>
 </head>
+
 <body>
 
-  <div class="container">
-    <h2>تسجيل المشرف</h2>
+<div class="header">
+  <img src="generated-icon.png" alt="Smart Bus Logo" class="logo">
+  <div class="title">الحافلة الذكية</div>
+  <div class="subtitle">تسجيل المشرف</div>
+</div>
 
-    <input type="text" id="adminName" placeholder="اسم المشرف" required><br>
-    <input type="email" id="adminEmail" placeholder="البريد الإلكتروني" required><br>
-    <input type="password" id="adminPassword" placeholder="كلمة المرور" required><br>
+<form id="admin-form">
+  <input type="text" id="admin-name" placeholder="اسم المشرف" required>
+  <input type="email" id="admin-email" placeholder="البريد الإلكتروني" required>
+  <input type="password" id="admin-password" placeholder="كلمة المرور" required>
+  <input type="text" id="admin-location" placeholder="موقعك الحالي" required>
+  <button type="submit">تسجيل</button>
+</form>
 
-    <div id="map"></div>
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+  import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
-    <button onclick="saveLocation()">حفظ الموقع</button><br>
-    <button onclick="registerAdmin()">تسجيل المشرف</button>
-  </div>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDbxJiBUVutivO_m6Q0-RdVohNaXauIe7Q",
+    authDomain: "smart-buss-d28fc.firebaseapp.com",
+    projectId: "smart-buss-d28fc",
+    storageBucket: "smart-buss-d28fc.appspot.com",
+    messagingSenderId: "1053196463821",
+    appId: "1:1053196463821:web:36ef08cdb73e85222b8384",
+    measurementId: "G-YR6THVL5H0"
+  };
 
-  <!-- Firebase & Google Maps -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDbxJiBUVutivO_m6Q0-RdVohNaXauIe7Q",
-      authDomain: "smart-buss-d28fc.firebaseapp.com",
-      projectId: "smart-buss-d28fc",
-      storageBucket: "smart-buss-d28fc.appspot.com",
-      messagingSenderId: "1053196463821",
-      appId: "1:1053196463821:web:36ef08cdb73e85222b8384",
-      measurementId: "G-YR6THVL5H0"
-    };
+  document.getElementById("admin-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    const name = document.getElementById("admin-name").value;
+    const email = document.getElementById("admin-email").value;
+    const password = document.getElementById("admin-password").value;
+    const location = document.getElementById("admin-location").value;
 
-    let selectedLocation = null;
-
-    window.saveLocation = function() {
-      if (marker) {
-        selectedLocation = {
-          lat: marker.getPosition().lat(),
-          lng: marker.getPosition().lng()
-        };
-        alert("تم حفظ الموقع بنجاح!");
-      }
-    };
-
-    window.registerAdmin = async function() {
-      const name = document.getElementById("adminName").value;
-      const email = document.getElementById("adminEmail").value;
-      const password = document.getElementById("adminPassword").value;
-
-      if (!name || !email || !password || !selectedLocation) {
-        alert("يرجى تعبئة جميع الحقول وتحديد الموقع.");
-        return;
-      }
-
-      try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        await addDoc(collection(db, "admins"), {
-          name: name,
-          email: email,
-          location: selectedLocation,
-          uid: user.uid
-        });
-        alert("تم تسجيل المشرف بنجاح!");
-        window.location.href = "admin_dashboard.html"; // توجيه إلى لوحة التحكم
-      } catch (error) {
-        alert("خطأ: " + error.message);
-      }
-    };
-
-    let map, marker;
-    window.initMap = function() {
-      map = new google.maps.Map(document.getElementById("map"), {
-        center: { lat: 24.7136, lng: 46.6753 },
-        zoom: 13,
+    try {
+      await addDoc(collection(db, "admins"), {
+        name: name,
+        email: email,
+        password: password,
+        location: location
       });
 
-      marker = new google.maps.Marker({
-        position: { lat: 24.7136, lng: 46.6753 },
-        map: map,
-        draggable: true
-      });
-
-      map.addListener("click", function(event) {
-        marker.setPosition(event.latLng);
-      });
-    };
-  </script>
-
-  <script async defer
-    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU&callback=initMap">
-  </script>
+      alert("تم تسجيل المشرف بنجاح!");
+      document.getElementById("admin-form").reset();
+    } catch (error) {
+      console.error("حدث خطأ أثناء التسجيل:", error);
+    }
+  });
+</script>
 
 </body>
 </html>
