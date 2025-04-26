@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>مواقع الطلاب</title>
   <style>
     body {
@@ -10,33 +10,29 @@
       text-align: center;
       margin: 0;
       padding: 0;
-      background-color: #f4f4f4;
-    }
-    h2 {
-      margin: 20px;
     }
     #map {
+      height: 100vh;
       width: 100%;
-      height: 90vh;
     }
   </style>
 </head>
 <body>
-
   <h2>مواقع الطلاب</h2>
   <div id="map"></div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    // Firebase connection
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU",
       authDomain: "smart-buss-9b145.firebaseapp.com",
       projectId: "smart-buss-9b145",
       storageBucket: "smart-buss-9b145.appspot.com",
-      messagingSenderId: "933742505867",
-      appId: "1:933742505867:web:02ef1c2048cced2566bb27"
+      messagingSenderId: "1073703656505",
+      appId: "1:1073703656505:web:663b3aa3ce0cf8e068ac5b"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -46,73 +42,45 @@
 
     window.initMap = async function () {
       map = new google.maps.Map(document.getElementById("map"), {
-        zoom: 14,
-        center: { lat: 24.7136, lng: 46.6753 }, // الرياض
-        mapTypeId: 'roadmap'
+        center: { lat: 24.7136, lng: 46.6753 }, // مركز مبدئي
+        zoom: 8
       });
 
-      const querySnapshot = await getDocs(collection(db, "students"));
-      querySnapshot.forEach((doc) => {
-        const student = doc.data();
-        if (student.location) {
-          const today = getTodayKey(); // احصل على اليوم الحالي
-          const attendanceStatus = student.attendance ? student.attendance[today] : null;
+      const studentsSnapshot = await getDocs(collection(db, "students"));
+      const attendanceSnapshot = await getDocs(collection(db, "attendance"));
 
-          const marker = new google.maps.Marker({
-            position: {
-              lat: student.location.lat,
-              lng: student.location.lng
-            },
+      const attendanceData = {};
+      attendanceSnapshot.forEach(doc => {
+        const data = doc.data();
+        attendanceData[data.name] = data.status;
+      });
+
+      studentsSnapshot.forEach(doc => {
+        const student = doc.data();
+        const location = student.location;
+        if (location) {
+          let color;
+          const status = attendanceData[student.name];
+
+          if (status === "حضور كامل") color = "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
+          else if (status === "ذهاب فقط") color = "http://maps.google.com/mapfiles/ms/icons/blue-dot.png";
+          else if (status === "عودة فقط") color = "http://maps.google.com/mapfiles/ms/icons/purple-dot.png";
+          else if (status === "غياب") color = "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
+          else color = "http://maps.google.com/mapfiles/ms/icons/grey-dot.png"; // بدون تحديد
+
+          new google.maps.Marker({
+            position: { lat: location.lat, lng: location.lng },
             map: map,
             title: student.name,
-            icon: getMarkerIcon(attendanceStatus)
-          });
-
-          const infoWindow = new google.maps.InfoWindow({
-            content: `<strong>${student.name}</strong><br>الحالة: ${attendanceStatus ? translateStatus(attendanceStatus) : 'غير محدد'}`
-          });
-
-          marker.addListener("click", () => {
-            infoWindow.open(map, marker);
+            icon: color
           });
         }
       });
     };
-
-    function getTodayKey() {
-      const days = ["sun", "mon", "tue", "wed", "thu"];
-      const todayIndex = (new Date().getDay() + 6) % 7; // لأن جافاسكربت تبدأ الأحد 0
-      return days[todayIndex];
-    }
-
-    function getMarkerIcon(status) {
-      if (status === "present") {
-        return "http://maps.google.com/mapfiles/ms/icons/green-dot.png"; // أخضر
-      } else if (status === "onlyMorning") {
-        return "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"; // أزرق
-      } else if (status === "onlyAfternoon") {
-        return "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"; // أصفر
-      } else if (status === "absent") {
-        return "http://maps.google.com/mapfiles/ms/icons/red-dot.png"; // أحمر
-      } else {
-        return "http://maps.google.com/mapfiles/ms/icons/grey-dot.png"; // رمادي للحالات الغير محددة
-      }
-    }
-
-    function translateStatus(status) {
-      switch (status) {
-        case "present": return "سيذهب ويرجع";
-        case "onlyMorning": return "ذهاب فقط";
-        case "onlyAfternoon": return "عودة فقط";
-        case "absent": return "لن يحضر";
-        default: return "غير محدد";
-      }
-    }
   </script>
 
   <script async defer
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU&callback=initMap">
   </script>
-
 </body>
 </html>
