@@ -27,7 +27,6 @@
   <div id="map"></div>
 
   <script type="module">
-    // استيراد الفايربيس
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -48,26 +47,29 @@
     window.initMap = async function () {
       map = new google.maps.Map(document.getElementById("map"), {
         zoom: 14,
-        center: { lat: 24.7136, lng: 46.6753 },
+        center: { lat: 24.7136, lng: 46.6753 }, // الرياض
         mapTypeId: 'roadmap'
       });
 
       const querySnapshot = await getDocs(collection(db, "students"));
       querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        if (data.location) {
+        const student = doc.data();
+        if (student.location) {
+          const today = getTodayKey(); // احصل على اليوم الحالي
+          const attendanceStatus = student.attendance ? student.attendance[today] : null;
+
           const marker = new google.maps.Marker({
             position: {
-              lat: data.location.lat,
-              lng: data.location.lng
+              lat: student.location.lat,
+              lng: student.location.lng
             },
             map: map,
-            title: data.name
+            title: student.name,
+            icon: getMarkerIcon(attendanceStatus)
           });
 
-          // بالون فوق الدبوس يظهر اسم الطالب وحالته (إذا فيه)
           const infoWindow = new google.maps.InfoWindow({
-            content: `<strong>${data.name}</strong>`
+            content: `<strong>${student.name}</strong><br>الحالة: ${attendanceStatus ? translateStatus(attendanceStatus) : 'غير محدد'}`
           });
 
           marker.addListener("click", () => {
@@ -75,6 +77,36 @@
           });
         }
       });
+    };
+
+    function getTodayKey() {
+      const days = ["sun", "mon", "tue", "wed", "thu"];
+      const todayIndex = (new Date().getDay() + 6) % 7; // لأن جافاسكربت تبدأ الأحد 0
+      return days[todayIndex];
+    }
+
+    function getMarkerIcon(status) {
+      if (status === "present") {
+        return "http://maps.google.com/mapfiles/ms/icons/green-dot.png"; // أخضر
+      } else if (status === "onlyMorning") {
+        return "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"; // أزرق
+      } else if (status === "onlyAfternoon") {
+        return "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"; // أصفر
+      } else if (status === "absent") {
+        return "http://maps.google.com/mapfiles/ms/icons/red-dot.png"; // أحمر
+      } else {
+        return "http://maps.google.com/mapfiles/ms/icons/grey-dot.png"; // رمادي للحالات الغير محددة
+      }
+    }
+
+    function translateStatus(status) {
+      switch (status) {
+        case "present": return "سيذهب ويرجع";
+        case "onlyMorning": return "ذهاب فقط";
+        case "onlyAfternoon": return "عودة فقط";
+        case "absent": return "لن يحضر";
+        default: return "غير محدد";
+      }
     }
   </script>
 
