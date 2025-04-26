@@ -1,136 +1,82 @@
 <!DOCTYPE html>
 <html lang="ar">
-
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>لوحة تحكم المشرف</title>
   <style>
     body {
       font-family: 'Tajawal', sans-serif;
       direction: rtl;
       text-align: center;
+      background-color: #f4f4f4;
       margin: 0;
       padding: 0;
-      height: 100vh;
-      background-color: #f4f4f4;
-    }
-
-    .header {
-      margin-top: 20px;
-    }
-
-    .title {
-      font-size: 30px;
-      font-weight: bold;
-      color: #333;
-      margin-bottom: 10px;
-    }
-
-    .subtitle {
-      font-size: 20px;
-      color: #444;
-      margin-bottom: 20px;
-    }
-
-    .container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
     }
 
     #map {
-      width: 80%;
-      height: 400px;
-      margin-bottom: 30px;
+      width: 100%;
+      height: 60vh;
+      margin-top: 10px;
     }
 
-    table {
-      width: 80%;
-      border-collapse: collapse;
-      margin-top: 20px;
+    .student-list {
+      margin-top: 30px;
     }
 
-    th, td {
-      padding: 15px;
-      text-align: center;
-      border: 1px solid #ddd;
-    }
-
-    th {
-      background-color: #f2f2f2;
-    }
-
-    .btn {
+    .student {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
       padding: 10px;
-      font-size: 14px;
+      background-color: #fff;
+      border-radius: 8px;
+      margin-left: 20px;
+      margin-right: 20px;
+    }
+
+    button {
+      background-color: #e0f7f4;
+      color: #333;
       border: none;
       cursor: pointer;
-      background-color: #28a745;
-      color: white;
-      border-radius: 5px;
+      font-size: 16px;
+      padding: 10px 20px;
+      border-radius: 8px;
     }
 
-    .btn:hover {
-      background-color: #218838;
+    button:hover {
+      background-color: #c9f1ec;
     }
 
-    .status-green {
-      background-color: #28a745;
-      color: white;
-    }
-
-    .status-blue {
-      background-color: #007bff;
-      color: white;
-    }
-
-    .status-yellow {
-      background-color: #ffc107;
-      color: white;
-    }
-
-    .status-red {
-      background-color: #dc3545;
-      color: white;
-    }
-
-    .status-purple {
+    .ascended-btn {
       background-color: #6f42c1;
       color: white;
+    }
+
+    .ascended-btn:hover {
+      background-color: #5a36a3;
     }
   </style>
 </head>
 
 <body>
 
-  <div class="container">
-    <div class="header">
-      <div class="title">لوحة تحكم المشرف</div>
-      <div class="subtitle">Smart Bus - مشرف</div>
-    </div>
+  <h2>لوحة تحكم المشرف</h2>
 
-    <!-- الخريطة -->
-    <div id="map"></div>
+  <div id="map"></div>
 
-    <!-- جدول الطلاب -->
-    <table id="studentTable">
-      <thead>
-        <tr>
-          <th>الاسم</th>
-          <th>الحالة اليوم</th>
-          <th>تأكيد صعود الطالب</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-
+  <div class="student-list">
+    <h3>الطلاب المسجلين:</h3>
+    <ul id="student-list"></ul>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js"></script>
+  <!-- Firebase + خريطة -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getFirestore, collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
-  <script>
-    // إعداد Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyDbxJiBUVutivO_m6Q0-RdVohNaXauIe7Q",
       authDomain: "smart-buss-d28fc.firebaseapp.com",
@@ -141,97 +87,133 @@
       measurementId: "G-YR6THVL5H0"
     };
 
-    // تهيئة Firebase
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-    // البيانات الخاصة بالطلاب
-    const students = JSON.parse(localStorage.getItem("students")) || [];
+    let map;
+    let students = [];
+    let studentMarkers = [];
 
-    // عرض الطلاب في الجدول
-    function displayStudents() {
-      const tableBody = document.getElementById("studentTable").getElementsByTagName('tbody')[0];
-
-      students.forEach(student => {
-        const row = tableBody.insertRow();
-        const nameCell = row.insertCell(0);
-        const statusCell = row.insertCell(1);
-        const buttonCell = row.insertCell(2);
-
-        nameCell.textContent = student.name;
-        const statusButton = document.createElement("button");
-        statusButton.classList.add("btn");
-
-        const status = student.attendance["sun"]; // مثال على حالة الطالب اليوم
-        statusButton.textContent = getStatusText(status);
-        statusButton.classList.add(getStatusClass(status));
-        buttonCell.appendChild(statusButton);
-
-        const confirmButton = document.createElement("button");
-        confirmButton.classList.add("btn");
-        confirmButton.textContent = "تأكيد صعود الطالب";
-        confirmButton.onclick = () => confirmPickup(student.name);
-        buttonCell.appendChild(confirmButton);
-      });
-    }
-
-    function getStatusText(status) {
-      if (status === "present") return "حاضر";
-      if (status === "onlyMorning") return "ذهاب فقط";
-      if (status === "onlyAfternoon") return "عودة فقط";
-      if (status === "absent") return "غائب";
-      return "لم يتم التحديد";
-    }
-
-    function getStatusClass(status) {
-      if (status === "present") return "status-green";
-      if (status === "onlyMorning") return "status-blue";
-      if (status === "onlyAfternoon") return "status-yellow";
-      if (status === "absent") return "status-red";
-      return "status-purple";
-    }
-
-    function confirmPickup(studentName) {
-      const student = students.find(s => s.name === studentName);
-      const index = students.indexOf(student);
-      if (student) {
-        students[index].attendance["sun"] = "pickedUp"; // تم الصعود
-        localStorage.setItem("students", JSON.stringify(students));
-        alert("تم تأكيد صعود الطالب!");
-        displayStudents(); // إعادة عرض الجدول بعد التحديث
-      }
-    }
-
-    // تهيئة الخريطة
-    function initMap() {
-      const map = new google.maps.Map(document.getElementById("map"), {
-        center: { lat: 26.3260, lng: 43.9750 },
-        zoom: 14,
+    async function initMap() {
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 24.7136, lng: 46.6753 },
+        zoom: 13,
       });
 
-      students.forEach(student => {
-        new google.maps.Marker({
+      const querySnapshot = await getDocs(collection(db, "students"));
+      querySnapshot.forEach((docSnap) => {
+        const student = docSnap.data();
+        student.id = docSnap.id;
+        students.push(student);
+
+        const marker = new google.maps.Marker({
           position: student.location,
           map: map,
           title: student.name,
-          icon: {
-            path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-            scale: 6,
-            fillColor: "#28a745", // مثال لون الدبوس
-            fillOpacity: 1,
-            strokeWeight: 1,
-            strokeColor: '#fff'
-          }
+          icon: getStudentIcon(student)
         });
+
+        studentMarkers.push({ id: student.id, marker: marker });
+      });
+
+      displayStudents();
+    }
+
+    function getStudentIcon(student) {
+      if (student.ascended) {
+        return {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#6f42c1',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        };
+      }
+
+      if (student.attendance && student.attendance.sun === "present") {
+        return {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#28a745',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        };
+      } else if (student.attendance && student.attendance.sun === "onlyMorning") {
+        return {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#007bff',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        };
+      } else if (student.attendance && student.attendance.sun === "onlyAfternoon") {
+        return {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#ffc107',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        };
+      } else {
+        return {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#dc3545',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        };
+      }
+    }
+
+    function displayStudents() {
+      const studentList = document.getElementById("student-list");
+      studentList.innerHTML = "";
+
+      students.forEach((student, index) => {
+        const li = document.createElement("li");
+        li.classList.add("student");
+
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = student.name;
+        li.appendChild(nameSpan);
+
+        const confirmBtn = document.createElement("button");
+        confirmBtn.classList.add("ascended-btn");
+        confirmBtn.textContent = "تم الصعود";
+        confirmBtn.onclick = () => markAsAscended(student, index);
+        li.appendChild(confirmBtn);
+
+        studentList.appendChild(li);
       });
     }
 
-    // تحميل الخريطة
-    window.onload = function () {
-      displayStudents();
-      initMap();
+    async function markAsAscended(student, index) {
+      const markerObj = studentMarkers.find(m => m.id === student.id);
+      if (markerObj) {
+        markerObj.marker.setIcon({
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#6f42c1',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        });
+      }
+
+      const studentRef = doc(db, "students", student.id);
+      await updateDoc(studentRef, {
+        ascended: true
+      });
+
+      alert("تم تسجيل صعود الطالب!");
     }
 
+    window.initMap = initMap;
   </script>
 
   <script async defer
