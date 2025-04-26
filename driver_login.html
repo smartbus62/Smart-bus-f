@@ -8,14 +8,13 @@
       font-family: 'Tajawal', sans-serif;
       direction: rtl;
       text-align: center;
+      background-color: #f4f4f4;
       margin: 0;
       padding: 0;
-      background-color: #f4f4f4;
     }
 
     .header {
       margin-top: 30px;
-      text-align: center;
     }
 
     .logo {
@@ -26,7 +25,7 @@
     }
 
     .title {
-      font-size: 28px;
+      font-size: 30px;
       font-weight: bold;
       color: #333;
       margin-bottom: 5px;
@@ -61,14 +60,22 @@
     }
 
     button {
-      background-color: #007bff;
-      color: white;
+      background-color: #e0f7f4;
+      color: #333;
       border: none;
       cursor: pointer;
+      transition: background-color 0.3s;
     }
 
     button:hover {
-      background-color: #0056b3;
+      background-color: #c9f1ec;
+    }
+
+    #map {
+      height: 300px;
+      width: 100%;
+      margin-top: 15px;
+      border-radius: 10px;
     }
   </style>
 </head>
@@ -76,7 +83,7 @@
 <body>
 
 <div class="header">
-  <img src="generated-icon.png" alt="Smart Bus Logo" class="logo">
+  <img src="images/generated-icon.png" alt="Smart Bus Logo" class="logo">
   <div class="title">الحافلة الذكية</div>
   <div class="subtitle">تسجيل السائق</div>
 </div>
@@ -85,7 +92,12 @@
   <input type="text" id="driver-name" placeholder="اسم السائق" required>
   <input type="email" id="driver-email" placeholder="البريد الإلكتروني" required>
   <input type="password" id="driver-password" placeholder="كلمة المرور" required>
-  <input type="text" id="driver-location" placeholder="موقعك الحالي" required>
+
+  <!-- مكان لتحديد الموقع -->
+  <div id="map"></div>
+
+  <input type="hidden" id="driver-location" required>
+
   <button type="submit">تسجيل</button>
 </form>
 
@@ -115,20 +127,64 @@
     const password = document.getElementById("driver-password").value;
     const location = document.getElementById("driver-location").value;
 
+    if (!location) {
+      alert("يرجى تحديد الموقع على الخريطة");
+      return;
+    }
+
     try {
       await addDoc(collection(db, "drivers"), {
         name: name,
         email: email,
         password: password,
-        location: location
+        location: JSON.parse(location)
       });
 
       alert("تم تسجيل السائق بنجاح!");
       document.getElementById("driver-form").reset();
     } catch (error) {
-      console.error("حدث خطأ أثناء التسجيل:", error);
+      console.error("خطأ أثناء تسجيل السائق:", error);
     }
   });
+</script>
+
+<!-- خرائط جوجل -->
+<script>
+  let map, marker;
+
+  function initMap() {
+    const defaultLocation = { lat: 24.7136, lng: 46.6753 }; // الرياض مركز مبدئي
+
+    map = new google.maps.Map(document.getElementById("map"), {
+      center: defaultLocation,
+      zoom: 13
+    });
+
+    marker = new google.maps.Marker({
+      position: defaultLocation,
+      map: map,
+      draggable: true
+    });
+
+    // عند تحريك الدبوس
+    marker.addListener('dragend', function () {
+      const position = marker.getPosition();
+      document.getElementById("driver-location").value = JSON.stringify({
+        lat: position.lat(),
+        lng: position.lng()
+      });
+    });
+
+    // أول تحديد مباشر
+    document.getElementById("driver-location").value = JSON.stringify({
+      lat: defaultLocation.lat,
+      lng: defaultLocation.lng
+    });
+  }
+</script>
+
+<script async defer
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU&callback=initMap">
 </script>
 
 </body>
