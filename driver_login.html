@@ -1,146 +1,135 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>تسجيل السائق</title>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-    import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyDbxJiBUVutivO_m6Q0-RdVohNaXauIe7Q",
-      authDomain: "smart-buss-d28fc.firebaseapp.com",
-      projectId: "smart-buss-d28fc",
-      storageBucket: "smart-buss-d28fc.appspot.com",
-      messagingSenderId: "1053196463821",
-      appId: "1:1053196463821:web:36ef08cdb73e85222b8384"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth();
-
-    document.addEventListener("DOMContentLoaded", () => {
-      const locationInput = document.getElementById("location");
-
-      // خريطة اختيار الموقع
-      const map = new google.maps.Map(document.getElementById("map"), {
-        center: { lat: 24.7136, lng: 46.6753 },
-        zoom: 12,
-      });
-
-      let marker;
-      map.addListener("click", (e) => {
-        const lat = e.latLng.lat();
-        const lng = e.latLng.lng();
-        locationInput.value = `${lat}, ${lng}`;
-
-        if (marker) {
-          marker.setMap(null);
-        }
-        marker = new google.maps.Marker({
-          position: { lat, lng },
-          map: map,
-        });
-      });
-
-      // زر التسجيل
-      document.getElementById("register").addEventListener("click", async () => {
-        const name = document.getElementById("name").value;
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
-        const location = document.getElementById("location").value;
-
-        if (!name || !email || !password || !location) {
-          alert("يرجى تعبئة جميع الحقول");
-          return;
-        }
-
-        try {
-          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-          const uid = userCredential.user.uid;
-
-          await addDoc(collection(db, "drivers"), {
-            name,
-            email,
-            location,
-            uid
-          });
-
-          alert("تم تسجيل السائق بنجاح!");
-        } catch (error) {
-          alert("حدث خطأ أثناء التسجيل: " + error.message);
-        }
-      });
-    });
-  </script>
   <style>
     body {
       font-family: 'Tajawal', sans-serif;
       direction: rtl;
       text-align: center;
-      background-color: #f4f4f4;
       margin: 0;
       padding: 0;
+      background-color: #f4f4f4;
     }
-    .container {
-      margin: 30px auto;
-      max-width: 400px;
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+
+    .header {
+      margin-top: 30px;
+      text-align: center;
     }
-    img.logo {
+
+    .logo {
       width: 120px;
+      height: 120px;
       border-radius: 50%;
-      margin-bottom: 20px;
+      object-fit: cover;
     }
-    input {
-      margin-bottom: 15px;
-      padding: 10px;
-      width: 100%;
+
+    .title {
+      font-size: 28px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 5px;
+    }
+
+    .subtitle {
+      font-size: 20px;
+      color: #555;
+      margin-bottom: 30px;
+    }
+
+    form {
+      margin-top: 20px;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    input, button {
+      width: 90%;
+      padding: 12px;
+      margin: 10px 0;
       font-size: 16px;
-      border-radius: 5px;
+      border-radius: 8px;
       border: 1px solid #ccc;
       box-sizing: border-box;
     }
-    #map {
-      height: 300px;
-      width: 100%;
-      margin-bottom: 15px;
-      border-radius: 8px;
-    }
+
     button {
       background-color: #007bff;
       color: white;
       border: none;
-      padding: 12px 20px;
-      font-size: 18px;
       cursor: pointer;
-      border-radius: 6px;
-      width: 100%;
     }
+
     button:hover {
       background-color: #0056b3;
     }
   </style>
 </head>
-<body>
-  <div class="container">
-    <img src="images/generated-icon.png" class="logo" alt="شعار الحافلة الذكية" />
-    <h2>تسجيل السائق</h2>
-    <input type="text" id="name" placeholder="اسم السائق">
-    <input type="email" id="email" placeholder="البريد الإلكتروني">
-    <input type="password" id="password" placeholder="كلمة المرور">
-    <input type="text" id="location" placeholder="موقعك الحالي (انقر على الخريطة)">
-    <div id="map"></div>
-    <button id="register">تسجيل</button>
-  </div>
 
-  <script async defer
-    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU&callback=Function.prototype">
-  </script>
+<body>
+
+<div class="header">
+  <img src="generated-icon.png" alt="Smart Bus Logo" class="logo">
+  <div class="title">الحافلة الذكية</div>
+  <div class="subtitle">تسجيل السائق</div>
+</div>
+
+<form id="driver-form">
+  <input type="text" id="driver-name" placeholder="اسم السائق" required>
+  <input type="email" id="driver-email" placeholder="البريد الإلكتروني" required>
+  <input type="password" id="driver-password" placeholder="كلمة المرور" required>
+  <input type="text" id="driver-location" placeholder="موقعك الحالي" required>
+  <button type="submit">تسجيل</button>
+</form>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+  import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDbxJiBUVutivO_m6Q0-RdVohNaXauIe7Q",
+    authDomain: "smart-buss-d28fc.firebaseapp.com",
+    projectId: "smart-buss-d28fc",
+    storageBucket: "smart-buss-d28fc.appspot.com",
+    messagingSenderId: "1053196463821",
+    appId: "1:1053196463821:web:36ef08cdb73e85222b8384",
+    measurementId: "G-YR6THVL5H0"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  document.getElementById("driver-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const name = document.getElementById("driver-name").value;
+    const email = document.getElementById("driver-email").value;
+    const password = document.getElementById("driver-password").value;
+    const location = document.getElementById("driver-location").value;
+
+    try {
+      await addDoc(collection(db, "drivers"), {
+        name: name,
+        email: email,
+        password: password,
+        location: location
+      });
+
+      alert("تم تسجيل السائق بنجاح!");
+      document.getElementById("driver-form").reset();
+    } catch (error) {
+      console.error("حدث خطأ أثناء التسجيل:", error);
+    }
+  });
+</script>
+
 </body>
 </html>
