@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ar">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>لوحة تحكم المشرف</title>
+  <style>
+    body {
+      font-family: 'Tajawal', sans-serif;
+      direction: rtl;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      background-color: #f4f4f4;
+    }
+
+    .header {
+      margin-top: 20px;
+    }
+
+    .title {
+      font-size: 30px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      font-size: 20px;
+      color: #444;
+      margin-bottom: 20px;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #map {
+      width: 80%;
+      height: 400px;
+      margin-bottom: 30px;
+    }
+
+    table {
+      width: 80%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      padding: 15px;
+      text-align: center;
+      border: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    .btn {
+      padding: 10px;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      background-color: #28a745;
+      color: white;
+      border-radius: 5px;
+    }
+
+    .btn:hover {
+      background-color: #218838;
+    }
+
+    .status-green {
+      background-color: #28a745;
+      color: white;
+    }
+
+    .status-blue {
+      background-color: #007bff;
+      color: white;
+    }
+
+    .status-yellow {
+      background-color: #ffc107;
+      color: white;
+    }
+
+    .status-red {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    .status-purple {
+      background-color: #6f42c1;
+      color: white;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <div class="header">
+      <div class="title">لوحة تحكم المشرف</div>
+      <div class="subtitle">Smart Bus - مشرف</div>
+    </div>
+
+    <!-- الخريطة -->
+    <div id="map"></div>
+
+    <!-- جدول الطلاب -->
+    <table id="studentTable">
+      <thead>
+        <tr>
+          <th>الاسم</th>
+          <th>الحالة اليوم</th>
+          <th>تأكيد صعود الطالب</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js"></script>
+
+  <script>
+    // إعداد Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyDbxJiBUVutivO_m6Q0-RdVohNaXauIe7Q",
+      authDomain: "smart-buss-d28fc.firebaseapp.com",
+      projectId: "smart-buss-d28fc",
+      storageBucket: "smart-buss-d28fc.appspot.com",
+      messagingSenderId: "1053196463821",
+      appId: "1:1053196463821:web:36ef08cdb73e85222b8384",
+      measurementId: "G-YR6THVL5H0"
+    };
+
+    // تهيئة Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore(app);
+
+    // البيانات الخاصة بالطلاب
+    const students = JSON.parse(localStorage.getItem("students")) || [];
+
+    // عرض الطلاب في الجدول
+    function displayStudents() {
+      const tableBody = document.getElementById("studentTable").getElementsByTagName('tbody')[0];
+
+      students.forEach(student => {
+        const row = tableBody.insertRow();
+        const nameCell = row.insertCell(0);
+        const statusCell = row.insertCell(1);
+        const buttonCell = row.insertCell(2);
+
+        nameCell.textContent = student.name;
+        const statusButton = document.createElement("button");
+        statusButton.classList.add("btn");
+
+        const status = student.attendance["sun"]; // مثال على حالة الطالب اليوم
+        statusButton.textContent = getStatusText(status);
+        statusButton.classList.add(getStatusClass(status));
+        buttonCell.appendChild(statusButton);
+
+        const confirmButton = document.createElement("button");
+        confirmButton.classList.add("btn");
+        confirmButton.textContent = "تأكيد صعود الطالب";
+        confirmButton.onclick = () => confirmPickup(student.name);
+        buttonCell.appendChild(confirmButton);
+      });
+    }
+
+    function getStatusText(status) {
+      if (status === "present") return "حاضر";
+      if (status === "onlyMorning") return "ذهاب فقط";
+      if (status === "onlyAfternoon") return "عودة فقط";
+      if (status === "absent") return "غائب";
+      return "لم يتم التحديد";
+    }
+
+    function getStatusClass(status) {
+      if (status === "present") return "status-green";
+      if (status === "onlyMorning") return "status-blue";
+      if (status === "onlyAfternoon") return "status-yellow";
+      if (status === "absent") return "status-red";
+      return "status-purple";
+    }
+
+    function confirmPickup(studentName) {
+      const student = students.find(s => s.name === studentName);
+      const index = students.indexOf(student);
+      if (student) {
+        students[index].attendance["sun"] = "pickedUp"; // تم الصعود
+        localStorage.setItem("students", JSON.stringify(students));
+        alert("تم تأكيد صعود الطالب!");
+        displayStudents(); // إعادة عرض الجدول بعد التحديث
+      }
+    }
+
+    // تهيئة الخريطة
+    function initMap() {
+      const map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 26.3260, lng: 43.9750 },
+        zoom: 14,
+      });
+
+      students.forEach(student => {
+        new google.maps.Marker({
+          position: student.location,
+          map: map,
+          title: student.name,
+          icon: {
+            path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+            scale: 6,
+            fillColor: "#28a745", // مثال لون الدبوس
+            fillOpacity: 1,
+            strokeWeight: 1,
+            strokeColor: '#fff'
+          }
+        });
+      });
+    }
+
+    // تحميل الخريطة
+    window.onload = function () {
+      displayStudents();
+      initMap();
+    }
+
+  </script>
+
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU&callback=initMap">
+  </script>
+
+</body>
+</html>

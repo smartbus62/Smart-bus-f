@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>تسجيل المشرف</title>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyDbxJiBUVutivO_m6Q0-RdVohNaXauIe7Q",
+          authDomain: "smart-buss-d28fc.firebaseapp.com",
+          projectId: "smart-buss-d28fc",
+          storageBucket: "smart-buss-d28fc.appspot.com",
+          messagingSenderId: "1053196463821",
+          appId: "1:1053196463821:web:36ef08cdb73e85222b8384",
+          measurementId: "G-YR6THVL5H0"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        window.auth = auth;
+        window.db = db;
+    </script>
+</head>
+
+<body>
+    <h2>تسجيل المشرف</h2>
+    <form id="adminForm">
+        <label for="adminName">اسم المشرف:</label>
+        <input type="text" id="adminName" required><br><br>
+
+        <label for="adminEmail">البريد الإلكتروني:</label>
+        <input type="email" id="adminEmail" required><br><br>
+
+        <label for="adminPassword">كلمة المرور:</label>
+        <input type="password" id="adminPassword" required><br><br>
+
+        <label for="adminLocation">موقعك الحالي:</label>
+        <input type="text" id="adminLocation" readonly><br><br>
+
+        <button type="submit">تسجيل</button>
+    </form>
+
+    <script type="module">
+        import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+        import { addDoc, collection } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+        // تحديد الموقع الجغرافي
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                const location = position.coords.latitude + ", " + position.coords.longitude;
+                document.getElementById("adminLocation").value = location;
+            });
+        } else {
+            alert("المتصفح لا يدعم تحديد الموقع.");
+        }
+
+        // تسجيل المشرف
+        document.getElementById("adminForm").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            const name = document.getElementById("adminName").value;
+            const email = document.getElementById("adminEmail").value;
+            const password = document.getElementById("adminPassword").value;
+            const location = document.getElementById("adminLocation").value;
+
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+                await addDoc(collection(db, "admins"), {
+                    name: name,
+                    email: email,
+                    location: location,
+                    uid: user.uid
+                });
+                alert("تم تسجيل المشرف بنجاح!");
+                window.location.href = "admin_dashboard.html"; // مثلاً صفحة لوحة تحكم المشرف
+            } catch (error) {
+                alert("حدث خطأ: " + error.message);
+            }
+        });
+    </script>
+</body>
+</html>

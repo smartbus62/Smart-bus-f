@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8" />
+  <title>تسجيل الطالب</title>
+  <style>
+    body {
+      font-family: Arial;
+      direction: rtl;
+      text-align: center;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      margin-top: 20px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    input, button {
+      margin: 10px;
+      padding: 15px;
+      font-size: 16px;
+      border-radius: 5px;
+      width: 100%;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    button:hover {
+      background-color: #218838;
+    }
+
+    #map {
+      width: 100%;
+      height: 300px;
+      margin-top: 10px;
+    }
+  </style>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    import { getFirestore, collection, setDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDbxJiBUVutivO_m6Q0-RdVohNaXauIe7Q",
+      authDomain: "smart-buss-d28fc.firebaseapp.com",
+      projectId: "smart-buss-d28fc",
+      storageBucket: "smart-buss-d28fc.appspot.com",
+      messagingSenderId: "1053196463821",
+      appId: "1:1053196463821:web:36ef08cdb73e85222b8384",
+      measurementId: "G-YR6THVL5H0"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let selectedLocation = { lat: 26.3260, lng: 43.9750 };
+    let map;
+    let marker;
+
+    window.initMap = function () {
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: selectedLocation,
+        zoom: 13,
+      });
+
+      marker = new google.maps.Marker({
+        position: selectedLocation,
+        map: map,
+        draggable: true,
+      });
+
+      map.addListener("click", function (e) {
+        selectedLocation = {
+          lat: e.latLng.lat(),
+          lng: e.latLng.lng()
+        };
+        marker.setPosition(selectedLocation);
+      });
+    };
+
+    document.getElementById("studentForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const name = document.getElementById("studentName").value;
+      const email = document.getElementById("studentEmail").value;
+      const password = document.getElementById("studentPassword").value;
+
+      if (!name || !email || !password) {
+        alert("يرجى تعبئة جميع الحقول.");
+        return;
+      }
+
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        await setDoc(doc(db, "students", user.uid), {
+          name: name,
+          email: email,
+          location: selectedLocation,
+          attendance: {},
+          ascended: false,
+          uid: user.uid
+        });
+
+        alert("تم تسجيل الطالب بنجاح!");
+        window.location.href = "attendance.html"; // تحويله لجدول الحضور بعد التسجيل
+      } catch (error) {
+        alert("حدث خطأ أثناء التسجيل: " + error.message);
+      }
+    });
+  </script>
+</head>
+
+<body>
+  <div class="container">
+    <h2>تسجيل الطالب</h2>
+
+    <form id="studentForm">
+      <input type="text" id="studentName" placeholder="اسم الطالب" required><br>
+      <input type="email" id="studentEmail" placeholder="البريد الإلكتروني" required><br>
+      <input type="password" id="studentPassword" placeholder="كلمة المرور" required><br>
+      <div id="map"></div><br>
+      <button type="submit">تسجيل الطالب</button>
+    </form>
+
+  </div>
+
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU&callback=initMap">
+  </script>
+</body>
+</html>
