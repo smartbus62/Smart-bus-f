@@ -2,40 +2,42 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8" />
-  <title>تتبع الطلاب</title>
+  <title>مواقع الطلاب</title>
   <style>
     body {
       font-family: 'Tajawal', sans-serif;
       direction: rtl;
       text-align: center;
-      background-color: #f4f4f4;
       margin: 0;
       padding: 0;
+      background-color: #f4f4f4;
+    }
+    h2 {
+      margin: 20px;
     }
     #map {
       width: 100%;
       height: 90vh;
-      margin-top: 20px;
     }
   </style>
 </head>
-
 <body>
+
   <h2>مواقع الطلاب</h2>
   <div id="map"></div>
 
   <script type="module">
-    // Firebase
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+    // استيراد الفايربيس
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU",
       authDomain: "smart-buss-9b145.firebaseapp.com",
       projectId: "smart-buss-9b145",
       storageBucket: "smart-buss-9b145.appspot.com",
-      messagingSenderId: "91686531082",
-      appId: "1:91686531082:web:3bbd8e9c10db0caa0c6016"
+      messagingSenderId: "933742505867",
+      appId: "1:933742505867:web:02ef1c2048cced2566bb27"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -43,14 +45,15 @@
 
     let map;
 
-    async function initMap() {
+    window.initMap = async function () {
       map = new google.maps.Map(document.getElementById("map"), {
-        zoom: 12,
-        center: { lat: 24.7136, lng: 46.6753 }, // مركز الرياض
+        zoom: 14,
+        center: { lat: 24.7136, lng: 46.6753 },
+        mapTypeId: 'roadmap'
       });
 
-      const studentsSnapshot = await getDocs(collection(db, "students"));
-      studentsSnapshot.forEach((doc) => {
+      const querySnapshot = await getDocs(collection(db, "students"));
+      querySnapshot.forEach((doc) => {
         const data = doc.data();
         if (data.location) {
           const marker = new google.maps.Marker({
@@ -59,21 +62,20 @@
               lng: data.location.lng
             },
             map: map,
-            title: data.name,
+            title: data.name
           });
 
-          const infowindow = new google.maps.InfoWindow({
-            content: `<strong>${data.name}</strong>`,
+          // بالون فوق الدبوس يظهر اسم الطالب وحالته (إذا فيه)
+          const infoWindow = new google.maps.InfoWindow({
+            content: `<strong>${data.name}</strong>`
           });
 
           marker.addListener("click", () => {
-            infowindow.open(map, marker);
+            infoWindow.open(map, marker);
           });
         }
       });
     }
-
-    window.initMap = initMap;
   </script>
 
   <script async defer
