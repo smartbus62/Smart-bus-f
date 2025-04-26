@@ -141,7 +141,8 @@
       });
 
       alert("تم تسجيل المشرف بنجاح!");
-      document.getElementById("admin-form").reset();
+window.location.href = "admin_dashboard.html";
+document.getElementById("admin-form").reset();
     } catch (error) {
       console.error("خطأ أثناء تسجيل المشرف:", error);
     }
