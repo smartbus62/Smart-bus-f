@@ -9,3 +9,8 @@ html {
   object-fit: cover; /* يضمن أن الصورة تغطي الدائرة بشكل مناسب */
   object-position: center; /* لضبط مركز الصورة بشكل صحيح داخل الدائرة */
 }
+.container {
+  max-width: 500px;
+  margin: auto;
+  padding: 20px;
+}
