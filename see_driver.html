@@ -2,7 +2,7 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8" />
-  <title>تتبع الحافلة</title>
+  <title>تتبع السائق</title>
   <style>
     body {
       font-family: Arial;
@@ -15,70 +15,58 @@
       margin-top: 20px;
     }
   </style>
-
-  <!-- Firebase مكتبات -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyDbxJiBUVutivO_m6Q0-RdVohNaXauIe7Q",
-      authDomain: "smart-buss-d28fc.firebaseapp.com",
-      projectId: "smart-buss-d28fc",
-      storageBucket: "smart-buss-d28fc.appspot.com",
-      messagingSenderId: "1053196463821",
-      appId: "1:1053196463821:web:36ef08cdb73e85222b8384",
-      measurementId: "G-YR6THVL5H0"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    window.db = db; // عشان نقدر نستخدمه خارج السكربت
-  </script>
 </head>
-
 <body>
   <h2>موقع السائق الآن</h2>
   <div id="map"></div>
 
-  <script type="module">
-    import { collection, getDocs } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+  <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-firestore.js"></script>
 
-    async function initMap() {
+  <script>
+    // إعداد Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyC9D3fE7-xxx-xxx",
+      authDomain: "smart-bus-xxxx.firebaseapp.com",
+      projectId: "smart-bus-xxxx",
+      storageBucket: "smart-bus-xxxx.appspot.com",
+      messagingSenderId: "xxx",
+      appId: "xxx"
+    };
+
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore(app);
+
+    // استعراض موقع السائق من فايربيز
+    async function loadDriverLocation() {
+      const querySnapshot = await db.collection("drivers").limit(1).get();
       const map = new google.maps.Map(document.getElementById("map"), {
-        zoom: 14,
-        center: { lat: 24.7136, lng: 46.6753 }, // مركز الخريطة مبدئي للرياض
+        zoom: 15,
+        center: { lat: 24.7136, lng: 46.6753 }, // الرياض افتراضي
       });
 
-      try {
-        const driversSnapshot = await getDocs(collection(db, "drivers"));
-        driversSnapshot.forEach((doc) => {
-          const driver = doc.data();
-          if (driver.location) {
-            const locationParts = driver.location.split(",");
-            const lat = parseFloat(locationParts[0]);
-            const lng = parseFloat(locationParts[1]);
-            
-            new google.maps.Marker({
-              position: { lat: lat, lng: lng },
-              map: map,
-              icon: "https://maps.google.com/mapfiles/kml/shapes/bus.png",
-              title: driver.name || "سائق"
-            });
-          }
+      querySnapshot.forEach((doc) => {
+        const driver = doc.data();
+        const driverLocation = JSON.parse(driver.location);
+
+        // إضافة دبوس لموقع السائق
+        new google.maps.Marker({
+          position: { lat: driverLocation.lat, lng: driverLocation.lng },
+          map,
+          title: driver.name,
+          icon: "https://maps.google.com/mapfiles/kml/shapes/bus.png"
         });
-      } catch (error) {
-        console.error("خطأ في تحميل مواقع السائقين:", error);
-      }
+      });
     }
 
-    window.initMap = initMap;
+    // جلب موقع السائق بعد تحميل الصفحة
+    window.onload = function() {
+      loadDriverLocation();
+    };
   </script>
 
   <script async defer
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU&callback=initMap">
   </script>
-
 </body>
 </html>
