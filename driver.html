@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>تسجيل السائق</title>
+  <style>
+    body {
+      font-family: 'Tajawal', sans-serif;
+      direction: rtl;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+    }
+
+    .container {
+      margin-top: 30px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    input, button {
+      margin: 10px;
+      padding: 15px;
+      font-size: 16px;
+      border-radius: 5px;
+      width: 100%;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    #map {
+      width: 100%;
+      height: 300px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>تسجيل السائق</h2>
+    <input type="text" id="driverName" placeholder="اسم السائق" required>
+    <input type="email" id="driverEmail" placeholder="البريد الإلكتروني" required>
+    <input type="password" id="driverPassword" placeholder="كلمة المرور" required>
+
+    <div id="map"></div>
+
+    <button onclick="saveDriver()">تسجيل</button>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDbxJiBUVutivO_m6Q0-RdVohNaXauIe7Q",
+      authDomain: "smart-buss-d28fc.firebaseapp.com",
+      projectId: "smart-buss-d28fc",
+      storageBucket: "smart-buss-d28fc.appspot.com",
+      messagingSenderId: "1053196463821",
+      appId: "1:1053196463821:web:36ef08cdb73e85222b8384"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    let selectedLocation = { lat: 24.7136, lng: 46.6753 }; // الرياض كموقع افتراضي
+    let marker;
+
+    function initMap() {
+      const map = new google.maps.Map(document.getElementById("map"), {
+        center: selectedLocation,
+        zoom: 13,
+      });
+
+      marker = new google.maps.Marker({
+        position: selectedLocation,
+        map: map,
+        draggable: true,
+      });
+
+      map.addListener("click", function (e) {
+        selectedLocation = {
+          lat: e.latLng.lat(),
+          lng: e.latLng.lng(),
+        };
+        marker.setPosition(selectedLocation);
+      });
+    }
+
+    function saveDriver() {
+      const name = document.getElementById("driverName").value;
+      const email = document.getElementById("driverEmail").value;
+      const password = document.getElementById("driverPassword").value;
+
+      if (!name || !email || !password || !selectedLocation) {
+        alert("يرجى تعبئة جميع الحقول وتحديد الموقع.");
+        return;
+      }
+
+      auth.createUserWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+          const user = userCredential.user;
+
+          db.collection("drivers").add({
+            name: name,
+            email: email,
+            uid: user.uid,
+            location: selectedLocation
+          }).then(() => {
+            alert("تم تسجيل السائق بنجاح!");
+            window.location.href = "track_bus.html";
+          }).catch((error) => {
+            alert("خطأ في حفظ البيانات: " + error.message);
+          });
+        })
+        .catch((error) => {
+          alert("حدث خطأ أثناء التسجيل: " + error.message);
+        });
+    }
+  </script>
+
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU&callback=initMap">
+  </script>
+</body>
+</html>
