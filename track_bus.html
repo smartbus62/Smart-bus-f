@@ -2,111 +2,74 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>تتبع الحافلة ومواقع الطلاب</title>
+  <title>تتبع الطلاب</title>
   <style>
     body {
       font-family: 'Tajawal', sans-serif;
       direction: rtl;
       text-align: center;
+      background-color: #f4f4f4;
       margin: 0;
       padding: 0;
-      background-color: #f4f4f4;
     }
     #map {
       width: 100%;
-      height: 100vh;
+      height: 90vh;
+    }
+    h2 {
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
+  <h2>مواقع الطلاب</h2>
+  <div id="map"></div>
 
-<h2>تتبع الحافلة ومواقع الطلاب</h2>
-<div id="map"></div>
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU",
+      authDomain: "smart-buss-9b145.firebaseapp.com",
+      projectId: "smart-buss-9b145",
+      storageBucket: "smart-buss-9b145.appspot.com",
+      messagingSenderId: "848213201518",
+      appId: "1:848213201518:web:8ab574ccebbce01d909bb5"
+    };
 
-<!-- إعداد اتصال فايربيس -->
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCmzRBEKcBsevj9Pr6Q30VwgOsGGd7ziQA",
-    authDomain: "smart-buss-9b145.firebaseapp.com",
-    projectId: "smart-buss-9b145",
-    storageBucket: "smart-buss-9b145.appspot.com",
-    messagingSenderId: "606785928259",
-    appId: "1:606785928259:web:3f1dfe512c61a970c5c41b"
-  };
-  
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-</script>
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-<!-- Google Maps API -->
-<script async defer
-  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU&callback=initMap">
-</script>
+    let map;
 
-<script>
-let map;
-let driverMarker;
+    async function initMap() {
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 24.7136, lng: 46.6753 }, // مركز الرياض
+        zoom: 10,
+      });
 
-function initMap() {
-  map = new google.maps.Map(document.getElementById("map"), {
-    zoom: 13,
-    center: { lat: 24.7136, lng: 46.6753 } // افتراضي الرياض
-  });
+      const studentsCol = collection(db, "students");
+      const studentsSnapshot = await getDocs(studentsCol);
 
-  // تتبع السائق
-  if (navigator.geolocation) {
-    navigator.geolocation.watchPosition((position) => {
-      const driverPos = {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude
-      };
-      if (driverMarker) {
-        driverMarker.setPosition(driverPos);
-      } else {
-        driverMarker = new google.maps.Marker({
-          position: driverPos,
-          map: map,
-          icon: "https://maps.google.com/mapfiles/kml/shapes/bus.png",
-          title: "موقع السائق"
-        });
-      }
-      map.setCenter(driverPos);
-    }, () => {
-      alert("تعذر تتبع موقع السائق.");
-    });
-  } else {
-    alert("المتصفح لا يدعم تتبع الموقع.");
-  }
+      studentsSnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.location && data.location.lat && data.location.lng) {
+          new google.maps.Marker({
+            position: { lat: data.location.lat, lng: data.location.lng },
+            map: map,
+            title: data.name,
+            icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png" // لون الدبوس أزرق
+          });
+        }
+      });
+    }
 
-  // تحميل مواقع الطلاب
-  loadStudentsLocations();
-}
+    window.initMap = initMap;
+  </script>
 
-function loadStudentsLocations() {
-  db.collection("students").get().then((querySnapshot) => {
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      if (data.location) {
-        new google.maps.Marker({
-          position: {
-            lat: data.location.lat,
-            lng: data.location.lng
-          },
-          map: map,
-          title: data.name,
-          icon: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png"
-        });
-      }
-    });
-  }).catch((error) => {
-    console.error("خطأ بجلب مواقع الطلاب:", error);
-  });
-}
-</script>
-
+  <!-- Google Maps API -->
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU&callback=initMap"></script>
 </body>
 </html>
