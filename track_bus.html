@@ -2,7 +2,7 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>مواقع الطلاب</title>
+  <title>تتبع الحافلة - السائق</title>
   <style>
     body {
       font-family: 'Tajawal', sans-serif;
@@ -10,18 +10,38 @@
       text-align: center;
       margin: 0;
       padding: 0;
+      background-color: #f4f4f4;
     }
+
     #map {
-      height: 100vh;
       width: 100%;
+      height: 100vh; /* اجعل الخريطة تغطي كامل الصفحة */
+    }
+
+    button {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      margin-top: 10px;
+      padding: 10px 20px;
+      border-radius: 5px;
+    }
+
+    button:hover {
+      background-color: #218838;
     }
   </style>
 </head>
 <body>
-  <h2>مواقع الطلاب</h2>
+
+  <h2>موقع الحافلة الحالي</h2>
+
   <div id="map"></div>
 
   <script type="module">
+    // Firebase connection
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
     import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
 
@@ -42,42 +62,32 @@
     window.initMap = async function () {
       map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: 24.7136, lng: 46.6753 }, // مركز مبدئي
-        zoom: 13
+        zoom: 8
       });
 
       const studentsSnapshot = await getDocs(collection(db, "students"));
-      const attendanceSnapshot = await getDocs(collection(db, "attendance"));
-
-      const attendanceData = {};
-      attendanceSnapshot.forEach(doc => {
-        const data = doc.data();
-        attendanceData[data.name] = data.status;
-      });
 
       studentsSnapshot.forEach(doc => {
         const student = doc.data();
         const location = student.location;
         if (location) {
-          let color;
-          const status = attendanceData[student.name];
-
-          // تحديد اللون حسب حالة الحضور
-          if (status === "حضور كامل") color = "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
-          else if (status === "ذهاب فقط") color = "http://maps.google.com/mapfiles/ms/icons/blue-dot.png";
-          else if (status === "عودة فقط") color = "http://maps.google.com/mapfiles/ms/icons/purple-dot.png";
-          else if (status === "غياب") color = "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
-          else color = "http://maps.google.com/mapfiles/ms/icons/grey-dot.png"; // بدون تحديد
-
-          // إضافة الدبوس
           new google.maps.Marker({
             position: { lat: location.lat, lng: location.lng },
             map: map,
             title: student.name,
-            icon: color
+            icon: getStudentIcon(student.attendance)
           });
         }
       });
     };
+
+    function getStudentIcon(status) {
+      if (status.sun === "حضور كامل") return "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
+      if (status.sun === "ذهاب فقط") return "http://maps.google.com/mapfiles/ms/icons/blue-dot.png";
+      if (status.sun === "عودة فقط") return "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png";
+      if (status.sun === "غياب") return "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
+      return "http://maps.google.com/mapfiles/ms/icons/grey-dot.png";
+    }
   </script>
 
   <script async defer
