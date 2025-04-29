@@ -2,7 +2,7 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>موقع السائق</title>
+  <title>مواقع الطلاب والحافلة</title>
   <style>
     body {
       font-family: 'Tajawal', sans-serif;
@@ -12,13 +12,13 @@
       padding: 0;
     }
     #map {
-      height: 100vh;
       width: 100%;
+      height: 100vh;
     }
   </style>
 </head>
 <body>
-  <h2>موقع السائق الآن</h2>
+  <h2>مواقع الطلاب والحافلة</h2>
   <div id="map"></div>
 
   <script type="module">
@@ -34,33 +34,65 @@
       appId: "1:1073703656505:web:663b3aa3ce0cf8e068ac5b"
     };
 
+    // تهيئة Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    let map;
+    let map, driverMarker;
 
-    window.initMap = async function () {
+    window.initMap = async function() {
+      // إنشاء الخريطة
       map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: 24.7136, lng: 46.6753 },
-        zoom: 10
+        zoom: 12,
+        mapTypeId: 'roadmap'
       });
 
-      const studentsSnapshot = await getDocs(collection(db, "students"));
-      studentsSnapshot.forEach(doc => {
-        const student = doc.data();
-        const location = student.location;
-        if (location) {
+      // تتبع موقع السائق وعرضه
+      if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(pos => {
+          const driverPos = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude
+          };
+          // أول مرة نخلق الماركر، بعدين نحركه
+          if (!driverMarker) {
+            driverMarker = new google.maps.Marker({
+              position: driverPos,
+              map,
+              icon: "https://maps.google.com/mapfiles/kml/shapes/bus.png",
+              title: "موقع الحافلة"
+            });
+          } else {
+            driverMarker.setPosition(driverPos);
+          }
+          // نحافظ على أن الخريطة تركز على السائق
+          map.setCenter(driverPos);
+        }, err => {
+          console.error("خطأ في تتبع موقع السائق:", err);
+        }, {
+          enableHighAccuracy: true,
+          maximumAge: 0
+        });
+      }
+
+      // جلب وعرض مواقع الطلاب
+      const studentsSnap = await getDocs(collection(db, "students"));
+      studentsSnap.forEach(doc => {
+        const s = doc.data();
+        if (s.location && typeof s.location.lat === "number") {
           new google.maps.Marker({
-            position: { lat: location.lat, lng: location.lng },
-            map: map,
-            title: student.name,
-            icon: "https://maps.google.com/mapfiles/ms/icons/green-dot.png"
+            position: { lat: s.location.lat, lng: s.location.lng },
+            map,
+            title: s.name,
+            icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
           });
         }
       });
     };
   </script>
 
+  <!-- استدعاء مكتبة Google Maps -->
   <script async defer
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU&callback=initMap">
   </script>
