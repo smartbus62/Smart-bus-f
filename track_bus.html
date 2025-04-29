@@ -10,14 +10,13 @@
       text-align: center;
       margin: 0;
       padding: 0;
-      background-color: #f4f4f4;
     }
     h2 {
-      margin: 20px 0;
+      margin: 20px 0 0;
     }
     #map {
       width: 100%;
-      height: 90vh;
+      height: calc(100vh - 60px);
     }
   </style>
 </head>
@@ -26,10 +25,11 @@
   <div id="map"></div>
 
   <script type="module">
+    // 1) استيراد مكتبات Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
     import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
 
-    // إعدادات Firebase (خله مثل ما عندك)
+    // 2) إعداد اتصال Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU",
       authDomain: "smart-buss-9b145.firebaseapp.com",
@@ -41,99 +41,62 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    let map, driverMarker;
-
-    // دالة تستخرج مفتاح اليوم الحالي من "sun", "mon", ...
-    function getTodayKey() {
-      const days = ["sun","mon","tue","wed","thu"];
-      // JavaScript: الأحد=0...السبت=6 → نرتبه بحيث 0→sun,1→mon...
-      const idx = (new Date().getDay() + 6) % 7;
-      return days[idx];
-    }
-
-    // ترجع أيقونة الدبوس باللون المناسب
-    function getMarkerIcon(status) {
-      switch(status) {
-        case "present":       // حضور كامل
-          return "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
-        case "onlyMorning":   // ذهاب فقط
-          return "http://maps.google.com/mapfiles/ms/icons/blue-dot.png";
-        case "onlyAfternoon": // عودة فقط
-          return "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png";
-        case "absent":        // غياب
-          return "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
-        default:              // غير محدد
-          return "http://maps.google.com/mapfiles/ms/icons/grey-dot.png";
-      }
-    }
-
+    // 3) الدالة التي تهيّئ الخريطة وتُضيف الدبابيس
     window.initMap = async function() {
-      // إنشاء الخريطة
-      map = new google.maps.Map(document.getElementById("map"), {
+      const map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: 24.7136, lng: 46.6753 }, // مركز مبدئي (الرياض)
-        zoom: 13,
-        mapTypeId: 'roadmap'
+        zoom: 10
       });
 
-      // تتبع موقع السائق وعرضه
-      if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(pos => {
-          const p = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          if (!driverMarker) {
-            driverMarker = new google.maps.Marker({
-              position: p,
-              map,
-              icon: "https://maps.google.com/mapfiles/kml/shapes/bus.png",
-              title: "موقع الحافلة"
-            });
-          } else {
-            driverMarker.setPosition(p);
-          }
-          map.setCenter(p);
-        }, err => {
-          console.error("خطأ في تتبع موقع السائق:", err);
-        }, {
-          enableHighAccuracy: true,
-          maximumAge: 0
-        });
-      }
+      // 3.1) جلب حالات الحضور
+      const attendanceSnap = await getDocs(collection(db, "attendance"));
+      const attendanceByName = {};
+      attendanceSnap.forEach(doc => {
+        const d = doc.data();
+        attendanceByName[d.name] = d.status;
+      });
 
-      // جلب بيانات الطلاب ورسم دبابيسهم حسب الحالة
-      const todayKey = getTodayKey();
+      // 3.2) جلب مواقع الطلاب ووضع دبابيس بحسب الحالة
       const studentsSnap = await getDocs(collection(db, "students"));
       studentsSnap.forEach(doc => {
         const s = doc.data();
-        let lat, lng;
-
-        // إذا خزن location ككائن {lat:.., lng:..}
-        if (s.location && typeof s.location === "object" && !isNaN(s.location.lat)) {
-          lat = s.location.lat;
-          lng = s.location.lng;
-        }
-        // إذا خزن location كنص "lat, lng"
-        else if (typeof s.location === "string") {
-          const parts = s.location.split(",");
-          lat = parseFloat(parts[0]);
-          lng = parseFloat(parts[1]);
-        }
-
-        if (!isNaN(lat) && !isNaN(lng)) {
-          // الحالة من جدول attendance باليوم الحالي
-          const status = s.attendance?.[todayKey];
-          const icon = getMarkerIcon(status);
+        if (s.location) {
+          const colorUrl = (() => {
+            switch (attendanceByName[s.name]) {
+              case "حضور كامل": return "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
+              case "ذهاب فقط":    return "http://maps.google.com/mapfiles/ms/icons/blue-dot.png";
+              case "عودة فقط":    return "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png";
+              case "غياب":       return "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
+              default:           return "http://maps.google.com/mapfiles/ms/icons/grey-dot.png";
+            }
+          })();
 
           new google.maps.Marker({
-            position: { lat, lng },
+            position: { lat: s.location.lat, lng: s.location.lng },
             map,
             title: s.name,
-            icon: icon
+            icon: colorUrl
           });
         }
+      });
+
+      // 3.3) جلب موقع الحافلة (السائق) ووضع دبوس الحافلة
+      const driversSnap = await getDocs(collection(db, "drivers"));
+      driversSnap.forEach(doc => {
+        const d = doc.data();
+        // هنا نفترض أنّ d.location مخزّنة كـ JSON string
+        const loc = typeof d.location === "string" ? JSON.parse(d.location) : d.location;
+        new google.maps.Marker({
+          position: { lat: loc.lat, lng: loc.lng },
+          map,
+          title: d.name || "الحافلة",
+          icon: "https://maps.google.com/mapfiles/kml/shapes/bus.png"
+        });
       });
     };
   </script>
 
-  <!-- جلب مكتبة Google Maps -->
+  <!-- 4) تضمين Google Maps مع مفتاحك وcallback -->
   <script async defer
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU&callback=initMap">
   </script>
