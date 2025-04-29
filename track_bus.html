@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>مواقع الطلاب والحافلة</title>
   <style>
     body {
@@ -10,10 +10,14 @@
       text-align: center;
       margin: 0;
       padding: 0;
+      background-color: #f4f4f4;
+    }
+    h2 {
+      margin: 20px 0;
     }
     #map {
       width: 100%;
-      height: 100vh;
+      height: 90vh;
     }
   </style>
 </head>
@@ -25,6 +29,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
     import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
 
+    // إعدادات Firebase (خله مثل ما عندك)
     const firebaseConfig = {
       apiKey: "AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU",
       authDomain: "smart-buss-9b145.firebaseapp.com",
@@ -33,41 +38,58 @@
       messagingSenderId: "1073703656505",
       appId: "1:1073703656505:web:663b3aa3ce0cf8e068ac5b"
     };
-
-    // تهيئة Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
     let map, driverMarker;
 
+    // دالة تستخرج مفتاح اليوم الحالي من "sun", "mon", ...
+    function getTodayKey() {
+      const days = ["sun","mon","tue","wed","thu"];
+      // JavaScript: الأحد=0...السبت=6 → نرتبه بحيث 0→sun,1→mon...
+      const idx = (new Date().getDay() + 6) % 7;
+      return days[idx];
+    }
+
+    // ترجع أيقونة الدبوس باللون المناسب
+    function getMarkerIcon(status) {
+      switch(status) {
+        case "present":       // حضور كامل
+          return "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
+        case "onlyMorning":   // ذهاب فقط
+          return "http://maps.google.com/mapfiles/ms/icons/blue-dot.png";
+        case "onlyAfternoon": // عودة فقط
+          return "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png";
+        case "absent":        // غياب
+          return "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
+        default:              // غير محدد
+          return "http://maps.google.com/mapfiles/ms/icons/grey-dot.png";
+      }
+    }
+
     window.initMap = async function() {
       // إنشاء الخريطة
       map = new google.maps.Map(document.getElementById("map"), {
-        center: { lat: 24.7136, lng: 46.6753 },
-        zoom: 12,
+        center: { lat: 24.7136, lng: 46.6753 }, // مركز مبدئي (الرياض)
+        zoom: 13,
         mapTypeId: 'roadmap'
       });
 
       // تتبع موقع السائق وعرضه
       if (navigator.geolocation) {
         navigator.geolocation.watchPosition(pos => {
-          const driverPos = {
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude
-          };
-          // أول مرة نخلق الماركر، بعدين نحركه
+          const p = { lat: pos.coords.latitude, lng: pos.coords.longitude };
           if (!driverMarker) {
             driverMarker = new google.maps.Marker({
-              position: driverPos,
+              position: p,
               map,
               icon: "https://maps.google.com/mapfiles/kml/shapes/bus.png",
               title: "موقع الحافلة"
             });
           } else {
-            driverMarker.setPosition(driverPos);
+            driverMarker.setPosition(p);
           }
-          // نحافظ على أن الخريطة تركز على السائق
-          map.setCenter(driverPos);
+          map.setCenter(p);
         }, err => {
           console.error("خطأ في تتبع موقع السائق:", err);
         }, {
@@ -76,23 +98,42 @@
         });
       }
 
-      // جلب وعرض مواقع الطلاب
+      // جلب بيانات الطلاب ورسم دبابيسهم حسب الحالة
+      const todayKey = getTodayKey();
       const studentsSnap = await getDocs(collection(db, "students"));
       studentsSnap.forEach(doc => {
         const s = doc.data();
-        if (s.location && typeof s.location.lat === "number") {
+        let lat, lng;
+
+        // إذا خزن location ككائن {lat:.., lng:..}
+        if (s.location && typeof s.location === "object" && !isNaN(s.location.lat)) {
+          lat = s.location.lat;
+          lng = s.location.lng;
+        }
+        // إذا خزن location كنص "lat, lng"
+        else if (typeof s.location === "string") {
+          const parts = s.location.split(",");
+          lat = parseFloat(parts[0]);
+          lng = parseFloat(parts[1]);
+        }
+
+        if (!isNaN(lat) && !isNaN(lng)) {
+          // الحالة من جدول attendance باليوم الحالي
+          const status = s.attendance?.[todayKey];
+          const icon = getMarkerIcon(status);
+
           new google.maps.Marker({
-            position: { lat: s.location.lat, lng: s.location.lng },
+            position: { lat, lng },
             map,
             title: s.name,
-            icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+            icon: icon
           });
         }
       });
     };
   </script>
 
-  <!-- استدعاء مكتبة Google Maps -->
+  <!-- جلب مكتبة Google Maps -->
   <script async defer
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU&callback=initMap">
   </script>
