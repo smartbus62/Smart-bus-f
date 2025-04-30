@@ -1,54 +1,31 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>تتبع الحافلة</title>
+  <meta charset="UTF-8" />
+  <title>تتبع السائق</title>
   <style>
     body {
-      font-family: 'Tajawal', sans-serif;
+      font-family: Arial;
       direction: rtl;
       text-align: center;
-      background-color: #f4f4f4;
-      margin: 0;
-      padding: 0;
     }
-
     #map {
       width: 100%;
-      height: 80vh; /* قم بتعديل الارتفاع لتناسب الجوال */
-    }
-
-    .track-btn {
-      background-color: #28a745;
-      color: white;
-      font-size: 18px;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
+      height: 500px;
       margin-top: 20px;
-      cursor: pointer;
-    }
-
-    .track-btn:hover {
-      background-color: #218838;
     }
   </style>
 </head>
-
 <body>
-
-  <h2>تتبع الحافلة</h2>
-
-  <button class="track-btn" onclick="trackBus()">تتبع الحافلة</button>
-
+  <h2>موقع السائق الآن</h2>
   <div id="map"></div>
 
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-firestore.js"></script>
-  
+
   <script>
-    // إعداد Firebase
+‎    // إعداد Firebase (خليه زي ما عندك)
     const firebaseConfig = {
       apiKey: "AIzaSyC9D3fE7-xxx-xxx",
       authDomain: "smart-bus-xxxx.firebaseapp.com",
@@ -57,48 +34,41 @@
       messagingSenderId: "xxx",
       appId: "xxx"
     };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore(app);
-
-    let map;
-    let driverLocation;
-
-    // عند الضغط على زر تتبع الحافلة
-    async function trackBus() {
-      const querySnapshot = await db.collection("drivers").limit(1).get();
-      querySnapshot.forEach((doc) => {
-        const driver = doc.data();
-        driverLocation = JSON.parse(driver.location); // استرجاع الموقع من فايربيس
-      });
-
-      // تهيئة الخريطة مع الموقع الحالي للسائق
-      map = new google.maps.Map(document.getElementById("map"), {
+‎    // دالة initMap التي تستدعيها مكتبة خرائط جوجل
+    async function initMap() {
+‎      // إنشاء الخريطة
+      const map = new google.maps.Map(document.getElementById("map"), {
         zoom: 15,
-        center: { lat: driverLocation.lat, lng: driverLocation.lng },  // الموقع الذي حدده السائق
+        center: { lat: 24.7136, lng: 46.6753 }
       });
 
-      // إضافة دبوس مميز لموقع السائق
-      new google.maps.Marker({
-        position: { lat: driverLocation.lat, lng: driverLocation.lng },
-        map: map,
-        title: "موقع السائق",
-        icon: "https://maps.google.com/mapfiles/kml/shapes/bus.png", // علامة الحافلة
-      });
-    }
+‎      // جلب أحدث سائق
+      const snapshot = await db.collection("drivers").limit(1).get();
+      snapshot.forEach(doc => {
+        const data = doc.data();
+‎        // مباشرة استخدم data.location.lat و data.location.lng
+        const pos = { lat: data.location.lat, lng: data.location.lng };
 
-    // تحميل الخريطة عند تحميل الصفحة
-    function initMap() {
-      map = new google.maps.Map(document.getElementById("map"), {
-        zoom: 8,
-        center: { lat: 24.7136, lng: 46.6753 }, // الرياض افتراضيًا
+‎        // إضافة دبوس الحافلة
+        new google.maps.Marker({
+          position: pos,
+          map,
+          title: data.name,
+          icon: "https://maps.google.com/mapfiles/kml/shapes/bus.png"
+        });
+        
+‎        // ضع مركز الخريطة على موقع السائق
+        map.setCenter(pos);
       });
     }
   </script>
 
+  <!-- Google Maps API: تأكد أنك تستخدم نفس الـ API Key -->
   <script async defer
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU&callback=initMap">
   </script>
-
 </body>
 </html>
