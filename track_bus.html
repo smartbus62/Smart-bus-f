@@ -120,40 +120,30 @@
     }
 
     function getStudentIcon(student) {
-      if (student.ascended) {
+      // تحديد لون الدبوس بناءً على حالة الحضور
+      if (student.attendance.sun === "present") {
         return {
           path: google.maps.SymbolPath.CIRCLE,
           scale: 10,
-          fillColor: '#6f42c1',
+          fillColor: '#28a745',  // الأخضر
           fillOpacity: 1,
           strokeColor: '#fff',
           strokeWeight: 2,
         };
-      }
-
-      if (student.attendance && student.attendance.sun === "present") {
+      } else if (student.attendance.sun === "onlyMorning") {
         return {
           path: google.maps.SymbolPath.CIRCLE,
           scale: 10,
-          fillColor: '#28a745',
+          fillColor: '#007bff',  // الأزرق
           fillOpacity: 1,
           strokeColor: '#fff',
           strokeWeight: 2,
         };
-      } else if (student.attendance && student.attendance.sun === "onlyMorning") {
+      } else if (student.attendance.sun === "onlyAfternoon") {
         return {
           path: google.maps.SymbolPath.CIRCLE,
           scale: 10,
-          fillColor: '#007bff',
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 2,
-        };
-      } else if (student.attendance && student.attendance.sun === "onlyAfternoon") {
-        return {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: '#ffc107',
+          fillColor: '#ffc107',  // الأصفر
           fillOpacity: 1,
           strokeColor: '#fff',
           strokeWeight: 2,
@@ -162,7 +152,7 @@
         return {
           path: google.maps.SymbolPath.CIRCLE,
           scale: 10,
-          fillColor: '#dc3545',
+          fillColor: '#dc3545',  // الأحمر
           fillOpacity: 1,
           strokeColor: '#fff',
           strokeWeight: 2,
@@ -198,7 +188,7 @@
         markerObj.marker.setIcon({
           path: google.maps.SymbolPath.CIRCLE,
           scale: 10,
-          fillColor: '#6f42c1',
+          fillColor: '#6f42c1',  // اللون البنفسجي
           fillOpacity: 1,
           strokeColor: '#fff',
           strokeWeight: 2,
