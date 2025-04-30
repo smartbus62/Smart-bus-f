@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة تحكم السائق</title>
+  <style>
+    body {
+      font-family: 'Tajawal', sans-serif;
+      direction: rtl;
+      text-align: center;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+
+    #map {
+      width: 100%;
+      height: 60vh;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h2>لوحة تحكم السائق</h2>
+
+  <div id="map"></div>
+
+  <!-- Firebase + خريطة -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDbxJiBUVutivO_m6Q0-RdVohNaXauIe7Q",
+      authDomain: "smart-buss-d28fc.firebaseapp.com",
+      projectId: "smart-buss-d28fc",
+      storageBucket: "smart-buss-d28fc.appspot.com",
+      messagingSenderId: "1053196463821",
+      appId: "1:1053196463821:web:36ef08cdb73e85222b8384",
+      measurementId: "G-YR6THVL5H0"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    let map;
+
+    async function initMap() {
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 24.7136, lng: 46.6753 },
+        zoom: 13,
+      });
+
+      const querySnapshot = await getDocs(collection(db, "students"));
+      querySnapshot.forEach((docSnap) => {
+        const student = docSnap.data();
+
+        const marker = new google.maps.Marker({
+          position: student.location,
+          map: map,
+          title: student.name,
+          icon: getStudentIcon(student)
+        });
+      });
+    }
+
+    function getStudentIcon(student) {
+      // هنا تعديلات على أيقونات الطلاب بناءً على حالة الحضور
+      if (student.ascended) {
+        return "http://maps.google.com/mapfiles/ms/icons/purple-dot.png";
+      } else {
+        // يمكنك تعديل الألوان حسب حالة الطالب
+        return "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
+      }
+    }
+
+    window.initMap = initMap;
+  </script>
+
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU&callback=initMap">
+  </script>
+
+</body>
+</html>
