@@ -19,6 +19,45 @@
       height: 60vh;
       margin-top: 10px;
     }
+
+    .student-list {
+      margin-top: 30px;
+    }
+
+    .student {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding: 10px;
+      background-color: #fff;
+      border-radius: 8px;
+      margin-left: 20px;
+      margin-right: 20px;
+    }
+
+    button {
+      background-color: #e0f7f4;
+      color: #333;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 10px 20px;
+      border-radius: 8px;
+    }
+
+    button:hover {
+      background-color: #c9f1ec;
+    }
+
+    .ascended-btn {
+      background-color: #6f42c1;
+      color: white;
+    }
+
+    .ascended-btn:hover {
+      background-color: #5a36a3;
+    }
   </style>
 </head>
 
@@ -28,10 +67,15 @@
 
   <div id="map"></div>
 
+  <div class="student-list">
+    <h3>الطلاب المسجلين:</h3>
+    <ul id="student-list"></ul>
+  </div>
+
   <!-- Firebase + خريطة -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDbxJiBUVutivO_m6Q0-RdVohNaXauIe7Q",
@@ -47,6 +91,8 @@
     const db = getFirestore(app);
 
     let map;
+    let students = [];
+    let studentMarkers = [];
 
     async function initMap() {
       map = new google.maps.Map(document.getElementById("map"), {
@@ -57,6 +103,8 @@
       const querySnapshot = await getDocs(collection(db, "students"));
       querySnapshot.forEach((docSnap) => {
         const student = docSnap.data();
+        student.id = docSnap.id;
+        students.push(student);
 
         const marker = new google.maps.Marker({
           position: student.location,
@@ -64,17 +112,105 @@
           title: student.name,
           icon: getStudentIcon(student)
         });
+
+        studentMarkers.push({ id: student.id, marker: marker });
       });
+
+      displayStudents();
     }
 
     function getStudentIcon(student) {
-      // هنا تعديلات على أيقونات الطلاب بناءً على حالة الحضور
       if (student.ascended) {
-        return "http://maps.google.com/mapfiles/ms/icons/purple-dot.png";
-      } else {
-        // يمكنك تعديل الألوان حسب حالة الطالب
-        return "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
+        return {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#6f42c1',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        };
       }
+
+      if (student.attendance && student.attendance.sun === "present") {
+        return {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#28a745',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        };
+      } else if (student.attendance && student.attendance.sun === "onlyMorning") {
+        return {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#007bff',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        };
+      } else if (student.attendance && student.attendance.sun === "onlyAfternoon") {
+        return {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#ffc107',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        };
+      } else {
+        return {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#dc3545',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        };
+      }
+    }
+
+    function displayStudents() {
+      const studentList = document.getElementById("student-list");
+      studentList.innerHTML = "";
+
+      students.forEach((student, index) => {
+        const li = document.createElement("li");
+        li.classList.add("student");
+
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = student.name;
+        li.appendChild(nameSpan);
+
+        const confirmBtn = document.createElement("button");
+        confirmBtn.classList.add("ascended-btn");
+        confirmBtn.textContent = "تم الصعود";
+        confirmBtn.onclick = () => markAsAscended(student, index);
+        li.appendChild(confirmBtn);
+
+        studentList.appendChild(li);
+      });
+    }
+
+    async function markAsAscended(student, index) {
+      const markerObj = studentMarkers.find(m => m.id === student.id);
+      if (markerObj) {
+        markerObj.marker.setIcon({
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#6f42c1',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        });
+      }
+
+      const studentRef = doc(db, "students", student.id);
+      await updateDoc(studentRef, {
+        ascended: true
+      });
+
+      alert("تم تسجيل صعود الطالب!");
     }
 
     window.initMap = initMap;
