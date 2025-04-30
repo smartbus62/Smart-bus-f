@@ -2,34 +2,21 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8" />
-  <title>مواقع الطلاب والحافلة</title>
+  <title>تتبع الحافلة</title>
   <style>
-    body {
-      font-family: 'Tajawal', sans-serif;
-      direction: rtl;
-      text-align: center;
-      margin: 0;
-      padding: 0;
-    }
-    h2 {
-      margin: 20px 0 0;
-    }
-    #map {
-      width: 100%;
-      height: calc(100vh - 60px);
-    }
+    body { font-family: 'Tajawal', sans-serif; direction: rtl; text-align: center; margin:0; padding:0 }
+    h2 { margin:20px 0 0 }
+    #map { width:100%; height:100vh; }
   </style>
 </head>
 <body>
-  <h2>مواقع الطلاب والحافلة</h2>
+  <h2>تتبع موقع الحافلة الآن</h2>
   <div id="map"></div>
 
   <script type="module">
-    // 1) استيراد مكتبات Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
     import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
 
-    // 2) إعداد اتصال Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU",
       authDomain: "smart-buss-9b145.firebaseapp.com",
@@ -41,62 +28,40 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // 3) الدالة التي تهيّئ الخريطة وتُضيف الدبابيس
     window.initMap = async function() {
+      // 1) تهيئة الخريطة
       const map = new google.maps.Map(document.getElementById("map"), {
-        center: { lat: 24.7136, lng: 46.6753 }, // مركز مبدئي (الرياض)
-        zoom: 10
+        center: { lat: 24.7136, lng: 46.6753 },
+        zoom: 12
       });
 
-      // 3.1) جلب حالات الحضور
-      const attendanceSnap = await getDocs(collection(db, "attendance"));
-      const attendanceByName = {};
-      attendanceSnap.forEach(doc => {
-        const d = doc.data();
-        attendanceByName[d.name] = d.status;
-      });
-
-      // 3.2) جلب مواقع الطلاب ووضع دبابيس بحسب الحالة
-      const studentsSnap = await getDocs(collection(db, "students"));
-      studentsSnap.forEach(doc => {
-        const s = doc.data();
-        if (s.location) {
-          const colorUrl = (() => {
-            switch (attendanceByName[s.name]) {
-              case "حضور كامل": return "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
-              case "ذهاب فقط":    return "http://maps.google.com/mapfiles/ms/icons/blue-dot.png";
-              case "عودة فقط":    return "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png";
-              case "غياب":       return "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
-              default:           return "http://maps.google.com/mapfiles/ms/icons/grey-dot.png";
-            }
-          })();
-
-          new google.maps.Marker({
-            position: { lat: s.location.lat, lng: s.location.lng },
-            map,
-            title: s.name,
-            icon: colorUrl
-          });
-        }
-      });
-
-      // 3.3) جلب موقع الحافلة (السائق) ووضع دبوس الحافلة
+      // 2) جلب موقع السائق
       const driversSnap = await getDocs(collection(db, "drivers"));
       driversSnap.forEach(doc => {
         const d = doc.data();
-        // هنا نفترض أنّ d.location مخزّنة كـ JSON string
-        const loc = typeof d.location === "string" ? JSON.parse(d.location) : d.location;
-        new google.maps.Marker({
-          position: { lat: loc.lat, lng: loc.lng },
+        if (!d.location) return;
+
+        let lat, lng;
+        if (typeof d.location === "object") {
+          lat = d.location.lat;  lng = d.location.lng;
+        } else {
+          const [a,b] = d.location.split(",");
+          lat = parseFloat(a); lng = parseFloat(b);
+        }
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        const marker = new google.maps.Marker({
+          position: { lat, lng },
           map,
           title: d.name || "الحافلة",
           icon: "https://maps.google.com/mapfiles/kml/shapes/bus.png"
         });
+
+        map.setCenter({ lat, lng });
       });
     };
   </script>
 
-  <!-- 4) تضمين Google Maps مع مفتاحك وcallback -->
   <script async defer
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU&callback=initMap">
   </script>
