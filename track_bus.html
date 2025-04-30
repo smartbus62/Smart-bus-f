@@ -1,224 +1,86 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>لوحة تحكم السائق</title>
+  <meta charset="UTF-8" />
+  <title>خريطة السائق</title>
   <style>
-    body {
-      font-family: 'Tajawal', sans-serif;
-      direction: rtl;
-      text-align: center;
-      background-color: #f4f4f4;
-      margin: 0;
-      padding: 0;
-    }
-
-    #map {
-      width: 100%;
-      height: 60vh;
-      margin-top: 10px;
-    }
-
-    .student-list {
-      margin-top: 30px;
-    }
-
-    .student {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-      padding: 10px;
-      background-color: #fff;
-      border-radius: 8px;
-      margin-left: 20px;
-      margin-right: 20px;
-    }
-
-    button {
-      background-color: #e0f7f4;
-      color: #333;
-      border: none;
-      cursor: pointer;
-      font-size: 16px;
-      padding: 10px 20px;
-      border-radius: 8px;
-    }
-
-    button:hover {
-      background-color: #c9f1ec;
-    }
-
-    .ascended-btn {
-      background-color: #6f42c1;
-      color: white;
-    }
-
-    .ascended-btn:hover {
-      background-color: #5a36a3;
-    }
+    body { font-family: 'Tajawal', sans-serif; direction: rtl; text-align: center; margin:0; padding:0 }
+    #map { width:100%; height:100vh; }
+    h2 { margin:20px 0 0 }
   </style>
 </head>
-
 <body>
-
-  <h2>لوحة تحكم السائق</h2>
-
+  <h2>خريطة الطلاب حسب حضورهم</h2>
   <div id="map"></div>
 
-  <div class="student-list">
-    <h3>الطلاب المسجلين:</h3>
-    <ul id="student-list"></ul>
-  </div>
-
-  <!-- Firebase + خريطة -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getFirestore, collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyDbxJiBUVutivO_m6Q0-RdVohNaXauIe7Q",
-      authDomain: "smart-buss-d28fc.firebaseapp.com",
-      projectId: "smart-buss-d28fc",
-      storageBucket: "smart-buss-d28fc.appspot.com",
-      messagingSenderId: "1053196463821",
-      appId: "1:1053196463821:web:36ef08cdb73e85222b8384",
-      measurementId: "G-YR6THVL5H0"
+      apiKey: "AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU",
+      authDomain: "smart-buss-9b145.firebaseapp.com",
+      projectId: "smart-buss-9b145",
+      storageBucket: "smart-buss-9b145.appspot.com",
+      messagingSenderId: "1073703656505",
+      appId: "1:1073703656505:web:663b3aa3ce0cf8e068ac5b"
     };
-
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    let map;
-    let students = [];
-    let studentMarkers = [];
-
-    async function initMap() {
-      map = new google.maps.Map(document.getElementById("map"), {
+    window.initMap = async function() {
+      // 1) تهيئة الخريطة
+      const map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: 24.7136, lng: 46.6753 },
-        zoom: 13,
+        zoom: 10
       });
 
-      const querySnapshot = await getDocs(collection(db, "students"));
-      querySnapshot.forEach((docSnap) => {
-        const student = docSnap.data();
-        student.id = docSnap.id;
-        students.push(student);
+      // 2) جلب حالة الحضور
+      const attendanceSnap = await getDocs(collection(db, "attendance"));
+      const statusByName = {};
+      attendanceSnap.forEach(d => {
+        const data = d.data();
+        statusByName[data.name] = data.status;
+      });
 
-        const marker = new google.maps.Marker({
-          position: student.location,
-          map: map,
-          title: student.name,
-          icon: getStudentIcon(student)
+      // 3) رسم علامات الطلاب
+      const studentsSnap = await getDocs(collection(db, "students"));
+      studentsSnap.forEach(doc => {
+        const s = doc.data();
+        if (!s.location) return;
+
+        // دعم حالتين: object أو نص "lat,lng"
+        let lat, lng;
+        if (typeof s.location === "object") {
+          lat = s.location.lat;  lng = s.location.lng;
+        } else {
+          const [a,b] = s.location.split(",");
+          lat = parseFloat(a);   lng = parseFloat(b);
+        }
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        // اختيار لون الدبوس
+        let colorDot;
+        switch (statusByName[s.name]) {
+          case "حضور كامل": colorDot = "green";  break;
+          case "ذهاب فقط":   colorDot = "blue";   break;
+          case "عودة فقط":   colorDot = "yellow"; break;
+          case "غياب":      colorDot = "red";    break;
+          default:           colorDot = "grey";   break;
+        }
+
+        new google.maps.Marker({
+          position: { lat, lng },
+          map,
+          title: s.name,
+          icon: `http://maps.google.com/mapfiles/ms/icons/${colorDot}-dot.png`
         });
-
-        studentMarkers.push({ id: student.id, marker: marker });
       });
-
-      displayStudents();
-    }
-
-    function getStudentIcon(student) {
-      if (student.ascended) {
-        return {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: '#6f42c1',
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 2,
-        };
-      }
-
-      if (student.attendance && student.attendance.sun === "present") {
-        return {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: '#28a745',
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 2,
-        };
-      } else if (student.attendance && student.attendance.sun === "onlyMorning") {
-        return {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: '#007bff',
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 2,
-        };
-      } else if (student.attendance && student.attendance.sun === "onlyAfternoon") {
-        return {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: '#ffc107',
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 2,
-        };
-      } else {
-        return {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: '#dc3545',
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 2,
-        };
-      }
-    }
-
-    function displayStudents() {
-      const studentList = document.getElementById("student-list");
-      studentList.innerHTML = "";
-
-      students.forEach((student, index) => {
-        const li = document.createElement("li");
-        li.classList.add("student");
-
-        const nameSpan = document.createElement("span");
-        nameSpan.textContent = student.name;
-        li.appendChild(nameSpan);
-
-        const confirmBtn = document.createElement("button");
-        confirmBtn.classList.add("ascended-btn");
-        confirmBtn.textContent = "تم الصعود";
-        confirmBtn.onclick = () => markAsAscended(student, index);
-        li.appendChild(confirmBtn);
-
-        studentList.appendChild(li);
-      });
-    }
-
-    async function markAsAscended(student, index) {
-      const markerObj = studentMarkers.find(m => m.id === student.id);
-      if (markerObj) {
-        markerObj.marker.setIcon({
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: '#6f42c1',
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 2,
-        });
-      }
-
-      const studentRef = doc(db, "students", student.id);
-      await updateDoc(studentRef, {
-        ascended: true
-      });
-
-      alert("تم تسجيل صعود الطالب!");
-    }
-
-    window.initMap = initMap;
+    };
   </script>
 
   <script async defer
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU&callback=initMap">
   </script>
-
 </body>
 </html>
