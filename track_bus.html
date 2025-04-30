@@ -1,7 +1,8 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>لوحة تحكم السائق</title>
   <style>
     body {
@@ -109,7 +110,7 @@
           position: student.location,
           map: map,
           title: student.name,
-          icon: getStudentIcon(student)   // <-- هنا استخدمنا الدالة الجديدة
+          icon: getStudentIcon(student)
         });
 
         studentMarkers.push({ id: student.id, marker: marker });
@@ -119,65 +120,96 @@
     }
 
     function getStudentIcon(student) {
-      // اختر اليوم الحالي (sun,mon,...)
-      const days = ["sun","mon","tue","wed","thu"];
-      const dayKey = days[(new Date().getDay()+6)%7];
-      const status = student.attendance?.[dayKey];
-
-      let fillColor;
-      switch (status) {
-        case "present":        fillColor = "#28a745"; break; // أخضر
-        case "onlyMorning":    fillColor = "#007bff"; break; // أزرق
-        case "onlyAfternoon":  fillColor = "#ffc107"; break; // أصفر
-        case "absent":         fillColor = "#dc3545"; break; // أحمر
-        default:               fillColor = "#6c757d"; break; // رمادي
+      if (student.ascended) {
+        return {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#6f42c1',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        };
       }
 
-      return {
-        path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, // سهم مغلق
-        scale: 8,             // حجم السهم
-        fillColor: fillColor,
-        fillOpacity: 1,
-        strokeColor: '#fff',
-        strokeWeight: 1,
-        rotation: 0           // يمكنك تغييره للتوجيه إذا أحببت
-      };
+      if (student.attendance && student.attendance.sun === "present") {
+        return {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#28a745',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        };
+      } else if (student.attendance && student.attendance.sun === "onlyMorning") {
+        return {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#007bff',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        };
+      } else if (student.attendance && student.attendance.sun === "onlyAfternoon") {
+        return {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#ffc107',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        };
+      } else {
+        return {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#dc3545',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        };
+      }
     }
 
     function displayStudents() {
       const studentList = document.getElementById("student-list");
       studentList.innerHTML = "";
+
       students.forEach((student, index) => {
         const li = document.createElement("li");
         li.classList.add("student");
 
-        const span = document.createElement("span");
-        span.textContent = student.name;
-        li.appendChild(span);
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = student.name;
+        li.appendChild(nameSpan);
 
-        const btn = document.createElement("button");
-        btn.classList.add("ascended-btn");
-        btn.textContent = "تم الصعود";
-        btn.onclick = () => markAsAscended(student, index);
-        li.appendChild(btn);
+        const confirmBtn = document.createElement("button");
+        confirmBtn.classList.add("ascended-btn");
+        confirmBtn.textContent = "تم الصعود";
+        confirmBtn.onclick = () => markAsAscended(student, index);
+        li.appendChild(confirmBtn);
 
         studentList.appendChild(li);
       });
     }
 
     async function markAsAscended(student, index) {
-      const mObj = studentMarkers.find(m=>m.id===student.id);
-      if (mObj) {
-        mObj.marker.setIcon({
-          path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-          scale: 8,
+      const markerObj = studentMarkers.find(m => m.id === student.id);
+      if (markerObj) {
+        markerObj.marker.setIcon({
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
           fillColor: '#6f42c1',
           fillOpacity: 1,
           strokeColor: '#fff',
-          strokeWeight: 1
+          strokeWeight: 2,
         });
       }
-      await updateDoc(doc(db,"students",student.id),{ascended:true});
+
+      const studentRef = doc(db, "students", student.id);
+      await updateDoc(studentRef, {
+        ascended: true
+      });
+
       alert("تم تسجيل صعود الطالب!");
     }
 
