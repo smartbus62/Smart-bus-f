@@ -1,86 +1,104 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8" />
-  <title>خريطة السائق</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تتبع الحافلة</title>
   <style>
-    body { font-family: 'Tajawal', sans-serif; direction: rtl; text-align: center; margin:0; padding:0 }
-    #map { width:100%; height:100vh; }
-    h2 { margin:20px 0 0 }
+    body {
+      font-family: 'Tajawal', sans-serif;
+      direction: rtl;
+      text-align: center;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+
+    #map {
+      width: 100%;
+      height: 80vh; /* قم بتعديل الارتفاع لتناسب الجوال */
+    }
+
+    .track-btn {
+      background-color: #28a745;
+      color: white;
+      font-size: 18px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      margin-top: 20px;
+      cursor: pointer;
+    }
+
+    .track-btn:hover {
+      background-color: #218838;
+    }
   </style>
 </head>
+
 <body>
-  <h2>خريطة الطلاب حسب حضورهم</h2>
+
+  <h2>تتبع الحافلة</h2>
+
+  <button class="track-btn" onclick="trackBus()">تتبع الحافلة</button>
+
   <div id="map"></div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
-    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
-
+  <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-firestore.js"></script>
+  
+  <script>
+    // إعداد Firebase
     const firebaseConfig = {
-      apiKey: "AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU",
-      authDomain: "smart-buss-9b145.firebaseapp.com",
-      projectId: "smart-buss-9b145",
-      storageBucket: "smart-buss-9b145.appspot.com",
-      messagingSenderId: "1073703656505",
-      appId: "1:1073703656505:web:663b3aa3ce0cf8e068ac5b"
+      apiKey: "AIzaSyC9D3fE7-xxx-xxx",
+      authDomain: "smart-bus-xxxx.firebaseapp.com",
+      projectId: "smart-bus-xxxx",
+      storageBucket: "smart-bus-xxxx.appspot.com",
+      messagingSenderId: "xxx",
+      appId: "xxx"
     };
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
 
-    window.initMap = async function() {
-      // 1) تهيئة الخريطة
-      const map = new google.maps.Map(document.getElementById("map"), {
-        center: { lat: 24.7136, lng: 46.6753 },
-        zoom: 10
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore(app);
+
+    let map;
+    let driverLocation;
+
+    // عند الضغط على زر تتبع الحافلة
+    async function trackBus() {
+      const querySnapshot = await db.collection("drivers").limit(1).get();
+      querySnapshot.forEach((doc) => {
+        const driver = doc.data();
+        driverLocation = JSON.parse(driver.location); // استرجاع الموقع من فايربيس
       });
 
-      // 2) جلب حالة الحضور
-      const attendanceSnap = await getDocs(collection(db, "attendance"));
-      const statusByName = {};
-      attendanceSnap.forEach(d => {
-        const data = d.data();
-        statusByName[data.name] = data.status;
+      // تهيئة الخريطة مع الموقع الحالي للسائق
+      map = new google.maps.Map(document.getElementById("map"), {
+        zoom: 15,
+        center: { lat: driverLocation.lat, lng: driverLocation.lng },  // الموقع الذي حدده السائق
       });
 
-      // 3) رسم علامات الطلاب
-      const studentsSnap = await getDocs(collection(db, "students"));
-      studentsSnap.forEach(doc => {
-        const s = doc.data();
-        if (!s.location) return;
-
-        // دعم حالتين: object أو نص "lat,lng"
-        let lat, lng;
-        if (typeof s.location === "object") {
-          lat = s.location.lat;  lng = s.location.lng;
-        } else {
-          const [a,b] = s.location.split(",");
-          lat = parseFloat(a);   lng = parseFloat(b);
-        }
-        if (isNaN(lat) || isNaN(lng)) return;
-
-        // اختيار لون الدبوس
-        let colorDot;
-        switch (statusByName[s.name]) {
-          case "حضور كامل": colorDot = "green";  break;
-          case "ذهاب فقط":   colorDot = "blue";   break;
-          case "عودة فقط":   colorDot = "yellow"; break;
-          case "غياب":      colorDot = "red";    break;
-          default:           colorDot = "grey";   break;
-        }
-
-        new google.maps.Marker({
-          position: { lat, lng },
-          map,
-          title: s.name,
-          icon: `http://maps.google.com/mapfiles/ms/icons/${colorDot}-dot.png`
-        });
+      // إضافة دبوس مميز لموقع السائق
+      new google.maps.Marker({
+        position: { lat: driverLocation.lat, lng: driverLocation.lng },
+        map: map,
+        title: "موقع السائق",
+        icon: "https://maps.google.com/mapfiles/kml/shapes/bus.png", // علامة الحافلة
       });
-    };
+    }
+
+    // تحميل الخريطة عند تحميل الصفحة
+    function initMap() {
+      map = new google.maps.Map(document.getElementById("map"), {
+        zoom: 8,
+        center: { lat: 24.7136, lng: 46.6753 }, // الرياض افتراضيًا
+      });
+    }
   </script>
 
   <script async defer
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-yD3xx8VZhACAof0ps9bWYa69sS_hGJU&callback=initMap">
   </script>
+
 </body>
 </html>
